@@ -6,56 +6,61 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @MappedSuperclass
-public class BaseEntity implements Serializable {
+public abstract class BaseEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "create_at", nullable = false, updatable = false)
+    @Version
+    private Long version;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(nullable = false)
-    private  Boolean active = true;
+    @Column(name = "created_by", length = 100, updatable = false)
+    private String createdBy;
 
-    @Version
-    private  Long version;
+    @Column(name = "updated_by", length = 100)
+    private String updatedBy;
 
     @PrePersist
-    protected void onCreated(){
+    protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    protected void onUpdate(){
-        updatedAt= LocalDateTime.now();
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
-
-    public Long getId(){
+    public Long getId() {
         return id;
     }
 
-    public  LocalDateTime getCreatedAt(){
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt(){
-        return updatedAt;
-    }
-
-    public Boolean getActive(){
-        return active;
-    }
-
-    private  Long getVersion(){
+    public Long getVersion() {
         return version;
     }
 
-    public void setActive(Boolean active){
-        this.active = active;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+
 }
