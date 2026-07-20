@@ -11,5 +11,11 @@
         <property name="hibernate.format_sql">true</property>
         <property name="hibernate.hbm2ddl.auto">validate</property>
         <property name="hibernate.current_session_context_class">thread</property>
+
+
+        <mapping class="org.kimwanyi.sacco.entity.User"/>
+        <mapping class="org.kimwanyi.sacco.entity.Role"/>
+        <mapping class="org.kimwanyi.sacco.entity.Permission"/>
+
     </session-factory>
 </hibernate-configuration>

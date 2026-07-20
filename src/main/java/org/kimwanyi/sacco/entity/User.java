@@ -5,15 +5,16 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
-import org.kimwanyi.sacco.enums.MemberStatus;
+import org.kimwanyi.sacco.enums.UserStatus;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+@Data
 @Entity
 @Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_username", columnNames = "userName"),
+        @UniqueConstraint(name = "uk_user_username", columnNames = "username"),
         @UniqueConstraint(name = "uk_user_email", columnNames = "email")
 })
 public class User extends BaseEntity{
@@ -29,12 +30,12 @@ public class User extends BaseEntity{
     private String email;
 
     @NotBlank
-    @Column(name = "password", nullable = false, length = 255)
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 25)
-    private MemberStatus status = MemberStatus.ACTIVE;
+    private UserStatus status = UserStatus.ACTIVE;
 
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts = 0;

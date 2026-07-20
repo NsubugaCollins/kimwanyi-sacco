@@ -1,5 +1,5 @@
 package org.kimwanyi.sacco.enums;
 
-public enum MemberStatus {
+public enum UserStatus {
     ACTIVE,INACTIVE,DECEASED,SUSPENDED,LOCKED
 }
