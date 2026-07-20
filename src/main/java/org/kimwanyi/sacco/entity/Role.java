@@ -1,80 +1,39 @@
 package org.kimwanyi.sacco.entity;
 
-
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.util.HashSet;
 import java.util.Set;
 
-
-@Getter
-@Setter
 @Entity
-@Table(name = "roles")
+@Table(name = "roles", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_role_name", columnNames = "name")
+        })
 public class Role extends BaseEntity {
 
-
-    @Column(nullable = false, unique = true, length = 100)
+    @NotBlank(message = "Role name is required")
+    @Size(max = 50)
+    @Column(nullable = false, length = 50)
     private String name;
 
-
+    @Size(max = 255)
     @Column(length = 255)
     private String description;
 
+    @Column(nullable = false)
+    private boolean active = true;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "role_permissions",
+    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private Set<UserRole> userRoles = new HashSet<>();
 
-            joinColumns =
-            @JoinColumn(name = "role_id"),
+    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private Set<RolePermission> rolePermissions = new HashSet<>();
 
-            inverseJoinColumns =
-            @JoinColumn(name = "permission_id")
-    )
-    private Set<Permission> permissions = new HashSet<>();
-
-
-
-    @ManyToMany(mappedBy = "roles")
-    private Set<User> users = new HashSet<>();
-
-
-
-    public Role(){
-
+    public Role() {
     }
-
-
-
-    public Role(String name, String description){
-
-        this.name = name;
-        this.description = description;
-
-    }
-
-
-
-    public void addPermission(Permission permission){
-
-        permissions.add(permission);
-
-        permission.getRoles().add(this);
-
-    }
-
-
-
-    public void removePermission(Permission permission){
-
-        permissions.remove(permission);
-
-        permission.getRoles().remove(this);
-
-    }
-
 
 }
