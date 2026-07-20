@@ -48,10 +48,10 @@ public class User extends BaseEntity{
     @Column(name = "password_changed_at")
     private LocalDateTime passwordChangedAt;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
-    inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL,
+            orphanRemoval = true, fetch = FetchType.LAZY
+    )
+    private Set<UserRole> userRoles = new HashSet<>();
 
     public User(){
 
@@ -76,5 +76,17 @@ public class User extends BaseEntity{
 
     public void updateLastLogin() {
         this.lastLogin = LocalDateTime.now();
+    }
+
+    public void addRole(Role role){
+
+        UserRole userRole = new UserRole();
+
+        userRole.setUser(this);
+
+        userRole.setRole(role);
+
+        userRoles.add(userRole);
+
     }
 }
