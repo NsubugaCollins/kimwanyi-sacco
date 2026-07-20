@@ -1,9 +1,11 @@
 package org.kimwanyi.sacco.audit;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import org.kimwanyi.sacco.entity.BaseEntity;
 import org.kimwanyi.sacco.enums.AuditAction;
 
+@Data
 @Entity
 @Table(name = "audit_logs")
 public class AuditLog extends BaseEntity {
