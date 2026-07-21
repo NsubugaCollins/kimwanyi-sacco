@@ -1,4 +1,4 @@
-package org.kimwanyi.sacco.security.password;
+package org.kimwanyi.sacco.security;
 
 public interface PasswordEncoder {
     String encode(String rawPassword);
