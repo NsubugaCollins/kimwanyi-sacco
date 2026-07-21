@@ -14,7 +14,7 @@ public class AuditServiceImpl implements AuditService {
 
     public void log(AuditAction action, String entityName, Long entityId, String description){
         AuditLog audit = new AuditLog();
-        audit.setAction(action);
+        audit.setAction(action != null ? action.name() : null);
         audit.setEntityName(entityName);
         audit.setEntityId(entityId);
         audit.setDescription(description);
