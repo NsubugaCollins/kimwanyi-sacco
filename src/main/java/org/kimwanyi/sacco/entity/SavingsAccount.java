@@ -7,6 +7,7 @@ import org.kimwanyi.sacco.enums.AccountStatus;
 import org.kimwanyi.sacco.enums.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +24,7 @@ import java.util.List;
 public class SavingsAccount extends BaseEntity {
 
     @NotBlank(message = "Account number is required")
-    @Column(name = "account_number", nullable = false, length = 30)
+    @Column(name = "account_number", nullable = false, length = 30, unique = true)
     private String accountNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,6 +34,21 @@ public class SavingsAccount extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private AccountStatus status = AccountStatus.ACTIVE;
+
+    @Column(name = "opened_date", nullable = false)
+    private LocalDate openedDate = LocalDate.now();
+
+    @Column(nullable = false)
+    private boolean frozen = false;
+
+    @Column(nullable = false)
+    private boolean closed = false;
+
+    @Column(name = "closed_date")
+    private LocalDate closedDate;
+
+    @Column(name = "closure_reason")
+    private String closureReason;
 
     @OneToMany(mappedBy = "savingsAccount", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<SavingsTransaction> transactions = new ArrayList<>();
@@ -96,5 +112,45 @@ public class SavingsAccount extends BaseEntity {
 
     public void setTransactions(List<SavingsTransaction> transactions) {
         this.transactions = transactions;
+    }
+
+    public LocalDate getOpenedDate() {
+        return openedDate;
+    }
+
+    public void setOpenedDate(LocalDate openedDate) {
+        this.openedDate = openedDate;
+    }
+
+    public boolean isFrozen() {
+        return frozen;
+    }
+
+    public void setFrozen(boolean frozen) {
+        this.frozen = frozen;
+    }
+
+    public boolean isClosed() {
+        return closed;
+    }
+
+    public void setClosed(boolean closed) {
+        this.closed = closed;
+    }
+
+    public LocalDate getClosedDate() {
+        return closedDate;
+    }
+
+    public void setClosedDate(LocalDate closedDate) {
+        this.closedDate = closedDate;
+    }
+
+    public String getClosureReason() {
+        return closureReason;
+    }
+
+    public void setClosureReason(String closureReason) {
+        this.closureReason = closureReason;
     }
 }

@@ -1,5 +1,6 @@
 package org.kimwanyi.sacco.service;
 
+import org.hibernate.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kimwanyi.sacco.dto.savings.DepositRequest;
@@ -175,7 +176,7 @@ public class SavingsServiceTest {
         }
 
         @Override
-        public Optional<SavingsAccount> findByAccountNumber(String accountNumber) {
+        public Optional<SavingsAccount> findByAccountNumber(Session session, String accountNumber) {
             if (account.getAccountNumber().equals(accountNumber)) {
                 return Optional.of(account);
             }
@@ -183,88 +184,88 @@ public class SavingsServiceTest {
         }
 
         @Override
-        public Optional<SavingsAccount> findByMemberId(Long memberId) {
+        public Optional<SavingsAccount> findByMemberId(Session session, Long memberId) {
             return Optional.of(account);
         }
 
         @Override
-        public boolean existsByAccountNumber(String accountNumber) {
+        public boolean existsByAccountNumber(Session session, String accountNumber) {
             return account.getAccountNumber().equals(accountNumber);
         }
 
         @Override
-        public SavingsAccount save(SavingsAccount entity) {
+        public SavingsAccount save(Session session, SavingsAccount entity) {
             return entity;
         }
 
         @Override
-        public SavingsAccount update(SavingsAccount entity) {
+        public SavingsAccount update(Session session, SavingsAccount entity) {
             return entity;
         }
 
         @Override
-        public Optional<SavingsAccount> findById(Long id) {
+        public Optional<SavingsAccount> findById(Session session, Long id) {
             return Optional.of(account);
         }
 
         @Override
-        public List<SavingsAccount> findAll() {
+        public List<SavingsAccount> findAll(Session session) {
             return Collections.singletonList(account);
         }
 
         @Override
-        public void delete(SavingsAccount entity) {}
+        public void delete(Session session, SavingsAccount entity) {}
 
         @Override
-        public long count() { return 1; }
+        public long count(Session session) { return 1; }
 
         @Override
-        public boolean existsById(Long id) { return true; }
+        public boolean existsById(Session session, Long id) { return true; }
     }
 
     private static class DummySavingsTransactionRepository implements SavingsTransactionRepository {
         private final List<SavingsTransaction> transactions = new ArrayList<>();
 
         @Override
-        public List<SavingsTransaction> findBySavingsAccountId(Long accountId) {
+        public List<SavingsTransaction> findBySavingsAccountId(Session session, Long accountId) {
             return transactions;
         }
 
         @Override
-        public boolean existsByReferenceNumber(String referenceNumber) {
+        public boolean existsByReferenceNumber(Session session, String referenceNumber) {
             if (referenceNumber == null) return false;
             return transactions.stream().anyMatch(t -> referenceNumber.equals(t.getReferenceNumber()));
         }
 
         @Override
-        public SavingsTransaction save(SavingsTransaction entity) {
+        public SavingsTransaction save(Session session, SavingsTransaction entity) {
             transactions.add(entity);
             return entity;
         }
 
         @Override
-        public SavingsTransaction update(SavingsTransaction entity) {
+        public SavingsTransaction update(Session session, SavingsTransaction entity) {
             return entity;
         }
 
         @Override
-        public Optional<SavingsTransaction> findById(Long id) {
+        public Optional<SavingsTransaction> findById(Session session, Long id) {
             return Optional.empty();
         }
 
         @Override
-        public List<SavingsTransaction> findAll() {
+        public List<SavingsTransaction> findAll(Session session) {
             return transactions;
         }
 
         @Override
-        public void delete(SavingsTransaction entity) {}
+        public void delete(Session session, SavingsTransaction entity) {}
 
         @Override
-        public long count() { return transactions.size(); }
+        public long count(Session session) { return transactions.size(); }
 
         @Override
-        public boolean existsById(Long id) { return false; }
+        public boolean existsById(Session session, Long id) { return false; }
     }
 
     private static class DummyMemberRepository implements MemberRepository {
@@ -275,36 +276,36 @@ public class SavingsServiceTest {
         }
 
         @Override
-        public boolean existsByNationalId(String nationalId) { return false; }
+        public boolean existsByNationalId(Session session, String nationalId) { return false; }
 
         @Override
-        public boolean existsByMembershipNumber(String membershipNumber) { return false; }
+        public boolean existsByMembershipNumber(Session session, String membershipNumber) { return false; }
 
         @Override
-        public Member findByMemberNumber(String membershipNumber) { return member; }
+        public Member findByMemberNumber(Session session, String membershipNumber) { return member; }
 
         @Override
-        public Member findByNationalId(String nationalId) { return member; }
+        public Member findByNationalId(Session session, String nationalId) { return member; }
 
         @Override
-        public Member save(Member entity) { return entity; }
+        public Member save(Session session, Member entity) { return entity; }
 
         @Override
-        public Member update(Member entity) { return entity; }
+        public Member update(Session session, Member entity) { return entity; }
 
         @Override
-        public Optional<Member> findById(Long id) { return Optional.of(member); }
+        public Optional<Member> findById(Session session, Long id) { return Optional.of(member); }
 
         @Override
-        public List<Member> findAll() { return Collections.singletonList(member); }
+        public List<Member> findAll(Session session) { return Collections.singletonList(member); }
 
         @Override
-        public void delete(Member entity) {}
+        public void delete(Session session, Member entity) {}
 
         @Override
-        public long count() { return 1; }
+        public long count(Session session) { return 1; }
 
         @Override
-        public boolean existsById(Long id) { return true; }
+        public boolean existsById(Session session, Long id) { return true; }
     }
 }

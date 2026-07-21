@@ -8,10 +8,11 @@ import org.kimwanyi.sacco.exception.AuthenticationException;
 import org.kimwanyi.sacco.repository.UserRepository;
 import org.kimwanyi.sacco.security.PasswordEncoder;
 import org.kimwanyi.sacco.security.SecurityConstants;
+import org.kimwanyi.sacco.util.TransactionManager;
 
 import java.time.LocalDateTime;
 
-public class AuthenticationServiceImpl implements AuthenticationService{
+public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -20,28 +21,30 @@ public class AuthenticationServiceImpl implements AuthenticationService{
         this.passwordEncoder = passwordEncoder;
     }
 
+    @Override
     public LogInResponse login(LogInRequest request){
-
-        User user = userRepository.findByUserName(request.getUsername());
-        if(user == null){
-            throw new AuthenticationException("Invalid username or password");
-        }
-        if(user.isLocked()){
-            throw new AccountLockedException("Account temporarily locked");
-        }
-        boolean validPassword = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
-        if(!validPassword){
-            user.increaseFailedAttempts();
-            if(user.hasReachedMaxAttempts(SecurityConstants.MAX_LOGIN_ATTEMPTS)){
-                user.lockAccount(SecurityConstants.LOCK_DURATION_MINUTES);
+        return TransactionManager.execute(session -> {
+            User user = userRepository.findByUserName(session, request.getUsername());
+            if(user == null){
+                throw new AuthenticationException("Invalid username or password");
             }
-            userRepository.update(user);
-            throw new AuthenticationException("Invalid username or password");
-        }
-        user.resetFailedLoginAttempts();
-        user.updateLastLogin();
-        userRepository.update(user);
-        return createResponse(user);
+            if(user.isLocked()){
+                throw new AccountLockedException("Account temporarily locked");
+            }
+            boolean validPassword = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
+            if(!validPassword){
+                user.increaseFailedAttempts();
+                if(user.hasReachedMaxAttempts(SecurityConstants.MAX_LOGIN_ATTEMPTS)){
+                    user.lockAccount(SecurityConstants.LOCK_DURATION_MINUTES);
+                }
+                userRepository.update(session, user);
+                throw new AuthenticationException("Invalid username or password");
+            }
+            user.resetFailedLoginAttempts();
+            user.updateLastLogin();
+            userRepository.update(session, user);
+            return createResponse(user);
+        });
     }
 
     public LogInResponse createResponse(User user){
@@ -53,6 +56,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
         return response;
     }
 
+    @Override
     public void logout(Long userId){
 
     }

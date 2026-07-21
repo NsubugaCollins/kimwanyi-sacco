@@ -1,53 +1,54 @@
 package org.kimwanyi.sacco.repositoryImpl;
 
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.kimwanyi.sacco.repository.GenericRepository;
 
 import java.util.List;
 import java.util.Optional;
 
 public abstract class GenericRepositoryImpl<T, ID> implements GenericRepository<T, ID> {
-    private final Class<T> entityClass;
-    protected SessionFactory sessionFactory;
 
-    public GenericRepositoryImpl(Class<T> entityClass, SessionFactory sessionFactory) {
+    protected final Class<T> entityClass;
+
+    public GenericRepositoryImpl(Class<T> entityClass) {
         this.entityClass = entityClass;
-        this.sessionFactory = sessionFactory;
     }
 
-    protected Session getSession(){
-        return sessionFactory.getCurrentSession();
-    }
-
-    public T save(T entity){
-        getSession().persist(entity);
+    @Override
+    public T save(Session session, T entity) {
+        session.persist(entity);
         return entity;
     }
 
-    public T update(T entity){
-        return getSession().merge(entity);
+    @Override
+    public T update(Session session, T entity) {
+        return session.merge(entity);
     }
 
-    public Optional<T> findById(ID id){
-        return Optional.ofNullable(getSession().find(entityClass, id));
+    @Override
+    public Optional<T> findById(Session session, ID id) {
+        return Optional.ofNullable(session.find(entityClass, id));
     }
 
-    public List<T> findAll(){
-        String sql = "FROM" + entityClass.getSimpleName();
-        return getSession().createQuery(sql, entityClass).getResultList();
+    @Override
+    public List<T> findAll(Session session) {
+        String sql = "FROM " + entityClass.getSimpleName();
+        return session.createQuery(sql, entityClass).getResultList();
     }
 
-    public void delete(T entity){
-        getSession().remove(entity);
+    @Override
+    public void delete(Session session, T entity) {
+        session.remove(entity);
     }
 
-    public long count(){
+    @Override
+    public long count(Session session) {
         String sql = "SELECT COUNT(e) FROM " + entityClass.getSimpleName() + " e";
-        return getSession().createQuery(sql, Long.class).getSingleResult();
+        return session.createQuery(sql, Long.class).getSingleResult();
     }
 
-    public boolean existsById(ID id){
-        return  findById(id).isPresent();
+    @Override
+    public boolean existsById(Session session, ID id) {
+        return findById(session, id).isPresent();
     }
 }
