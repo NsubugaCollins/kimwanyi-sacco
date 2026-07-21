@@ -31,6 +31,24 @@ public class SavingsTransaction extends BaseEntity {
     @Column(name = "reference_number", length = 50, unique = true)
     private String referenceNumber;
 
+    @Column(name = "transaction_number", length = 50, unique = true)
+    private String transactionNumber;
+
+    @Column(name = "receipt_number", length = 50, unique = true)
+    private String receiptNumber;
+
+    @Column(name = "balance_before", precision = 15, scale = 2)
+    private BigDecimal balanceBefore;
+
+    @Column(name = "balance_after", precision = 15, scale = 2)
+    private BigDecimal balanceAfter;
+
+    @Column(name = "performed_by_user_id")
+    private Long performedByUserId;
+
+    @Column(name = "channel", length = 20)
+    private String channel;
+
     public SavingsTransaction() {
     }
 
@@ -80,5 +98,53 @@ public class SavingsTransaction extends BaseEntity {
 
     public void setReferenceNumber(String referenceNumber) {
         this.referenceNumber = referenceNumber;
+    }
+
+    public String getTransactionNumber() {
+        return transactionNumber;
+    }
+
+    public void setTransactionNumber(String transactionNumber) {
+        this.transactionNumber = transactionNumber;
+    }
+
+    public String getReceiptNumber() {
+        return receiptNumber;
+    }
+
+    public void setReceiptNumber(String receiptNumber) {
+        this.receiptNumber = receiptNumber;
+    }
+
+    public BigDecimal getBalanceBefore() {
+        return balanceBefore;
+    }
+
+    public void setBalanceBefore(BigDecimal balanceBefore) {
+        this.balanceBefore = balanceBefore;
+    }
+
+    public BigDecimal getBalanceAfter() {
+        return balanceAfter;
+    }
+
+    public void setBalanceAfter(BigDecimal balanceAfter) {
+        this.balanceAfter = balanceAfter;
+    }
+
+    public Long getPerformedByUserId() {
+        return performedByUserId;
+    }
+
+    public void setPerformedByUserId(Long performedByUserId) {
+        this.performedByUserId = performedByUserId;
+    }
+
+    public String getChannel() {
+        return channel;
+    }
+
+    public void setChannel(String channel) {
+        this.channel = channel;
     }
 }

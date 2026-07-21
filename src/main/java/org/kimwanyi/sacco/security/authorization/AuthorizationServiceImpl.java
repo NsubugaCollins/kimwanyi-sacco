@@ -5,6 +5,7 @@ import org.kimwanyi.sacco.entity.User;
 import org.kimwanyi.sacco.enums.PermissionName;
 import org.kimwanyi.sacco.exception.AccessDeniedException;
 import org.kimwanyi.sacco.repository.UserRepository;
+import org.kimwanyi.sacco.util.TransactionManager;
 
 public class AuthorizationServiceImpl {
     private final UserRepository userRepository;
@@ -14,17 +15,19 @@ public class AuthorizationServiceImpl {
     }
 
     public boolean hasPermission(Long userId, PermissionName permission){
-        User user = userRepository.findById(userId).orElseThrow(()->
-                new ValidationException("user not found"));
+        return TransactionManager.execute(session -> {
+            User user = userRepository.findById(session, userId).orElseThrow(()->
+                    new ValidationException("user not found"));
 
-        if(user == null){
-            return false;
-        }
-        return user.getUserRoles().stream().filter(ur -> ur.isActive()).anyMatch(
-                ur -> ur.getRole().getRolePermissions().stream().anyMatch(
-                        rp ->rp.isActive() && rp.getPermission().getName().equals(permission)
-                )
-        );
+            if(user == null){
+                return false;
+            }
+            return user.getUserRoles().stream().filter(ur -> ur.isActive()).anyMatch(
+                    ur -> ur.getRole().getRolePermissions().stream().anyMatch(
+                            rp -> rp.isActive() && rp.getPermission().getName().equals(permission)
+                    )
+            );
+        });
     }
 
     public void checkPermission(Long userId, PermissionName permission){

@@ -12,6 +12,7 @@ import org.kimwanyi.sacco.repository.MemberRepository;
 import org.kimwanyi.sacco.service.MemberService;
 import org.kimwanyi.sacco.util.MembershipNumberGenerator;
 import org.kimwanyi.sacco.util.PhoneNumberUtil;
+import org.kimwanyi.sacco.util.TransactionManager;
 import org.kimwanyi.sacco.validation.MemberValidator;
 
 import java.util.List;
@@ -38,86 +39,79 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public MemberResponse registerMember(CreateMemberRequest request) {
-
         validateRequest(request);
-
         Member member = memberMapper.toEntity(request);
-
         normalize(member);
-
         validateBusinessRules(member);
 
-        checkDuplicates(member);
+        return TransactionManager.execute(session -> {
+            checkDuplicates(session, member);
+            assignMembershipNumber(session, member);
 
-        assignMembershipNumber(member);
+            Member savedMember = memberRepository.save(session, member);
+            auditCreation(savedMember);
 
-        Member savedMember = memberRepository.save(member);
-
-        auditCreation(savedMember);
-
-        return memberMapper.toResponse(savedMember);
+            return memberMapper.toResponse(savedMember);
+        });
     }
 
     @Override
     public MemberResponse findById(Long memberId) {
-
-        Member member = memberRepository.findById(memberId).orElseThrow(()
-        ->  new ValidationException("Member not found."));
-
-
-        return memberMapper.toResponse(member);
+        return TransactionManager.execute(session -> {
+            Member member = memberRepository.findById(session, memberId).orElseThrow(()
+                    -> new ValidationException("Member not found."));
+            return memberMapper.toResponse(member);
+        });
     }
 
     @Override
     public MemberResponse findByMembershipNumber(String membershipNumber) {
-
         if (membershipNumber == null || membershipNumber.isBlank()) {
             throw new ValidationException("Membership number is required.");
         }
 
-        Member member = memberRepository.findByMemberNumber(
-                membershipNumber.trim()
-        );
-
-        if (member == null) {
-            throw new ValidationException("Member not found.");
-        }
-
-        return memberMapper.toResponse(member);
+        return TransactionManager.execute(session -> {
+            Member member = memberRepository.findByMemberNumber(session, membershipNumber.trim());
+            if (member == null) {
+                throw new ValidationException("Member not found.");
+            }
+            return memberMapper.toResponse(member);
+        });
     }
 
     @Override
     public List<MemberResponse> findAll() {
-
-        return memberRepository.findAll()
-                .stream()
-                .map(memberMapper::toResponse)
-                .collect(Collectors.toList());
+        return TransactionManager.execute(session -> {
+            return memberRepository.findAll(session)
+                    .stream()
+                    .map(memberMapper::toResponse)
+                    .collect(Collectors.toList());
+        });
     }
 
     @Override
     public void deactivateMember(Long memberId) {
+        TransactionManager.execute(session -> {
+            Member member = memberRepository.findById(session, memberId).orElseThrow(()
+                    -> new ValidationException("Member not found."));
 
-        Member member = memberRepository.findById(memberId).orElseThrow(()
-                ->  new ValidationException("Member not found."));
+            if (member.getStatus() == UserStatus.INACTIVE) {
+                throw new ValidationException("Member is already inactive.");
+            }
 
-        if (member.getStatus() == UserStatus.INACTIVE) {
-            throw new ValidationException("Member is already inactive.");
-        }
+            member.setStatus(UserStatus.INACTIVE);
+            memberRepository.update(session, member);
 
-        member.setStatus(UserStatus.INACTIVE);
-
-        memberRepository.update(member);
-
-        auditService.logSuccess(
-                null, // Replace with logged-in user id later
-                AuditAction.DEACTIVATE_MEMBER,
-                "Member",
-                member.getId(),
-                "Member account deactivated"
-        );
+            auditService.logSuccess(
+                    null, // Replace with logged-in user id later
+                    AuditAction.DEACTIVATE_MEMBER,
+                    "Member",
+                    member.getId(),
+                    "Member account deactivated"
+            );
+            return null;
+        });
     }
-
 
     private void validateRequest(CreateMemberRequest request) {
         if (request == null) {
@@ -146,22 +140,19 @@ public class MemberServiceImpl implements MemberService {
         memberValidator.validate(member);
     }
 
-    private void checkDuplicates(Member member) {
-
-        if (memberRepository.existsByNationalId(member.getNationalId())) {
-            throw new ValidationException("A member with this National ID already exists."
-            );
+    private void checkDuplicates(org.hibernate.Session session, Member member) {
+        if (memberRepository.existsByNationalId(session, member.getNationalId())) {
+            throw new ValidationException("A member with this National ID already exists.");
         }
     }
 
-    private void assignMembershipNumber(Member member) {
-        long nextSequence = memberRepository.count() + 1;
+    private void assignMembershipNumber(org.hibernate.Session session, Member member) {
+        long nextSequence = memberRepository.count(session) + 1;
         String membershipNumber = MembershipNumberGenerator.generate(nextSequence);
         member.setMembershipNumber(membershipNumber);
     }
 
     private void auditCreation(Member member) {
-
         auditService.logSuccess(null, // Replace with authenticated user id
                 AuditAction.CREATE_MEMBER,
                 "Member",

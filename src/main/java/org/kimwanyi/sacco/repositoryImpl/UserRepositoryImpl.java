@@ -1,45 +1,42 @@
 package org.kimwanyi.sacco.repositoryImpl;
 
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.kimwanyi.sacco.entity.User;
 import org.kimwanyi.sacco.repository.UserRepository;
 
 public class UserRepositoryImpl extends GenericRepositoryImpl<User, Long> implements UserRepository {
-    public  UserRepositoryImpl(SessionFactory sessionFactory){
-        super(User.class, sessionFactory);
+
+    public UserRepositoryImpl(){
+        super(User.class);
     }
 
-    public User findByUserName(String username){
-        Session session = sessionFactory.getCurrentSession();
+    @Override
+    public User findByUserName(Session session, String username){
         return session.createQuery("FROM User u WHERE u.username = :username", User.class)
                 .setParameter("username", username)
                 .uniqueResult();
     }
 
-    public User findByEmail(String email){
-        Session session = sessionFactory.getCurrentSession();
+    @Override
+    public User findByEmail(Session session, String email){
         return session.createQuery("FROM User u WHERE u.email = :email", User.class)
                 .setParameter("email", email)
                 .uniqueResult();
     }
 
     @Override
-    public boolean existsByUserName(String username) {
-        Long count = sessionFactory.getCurrentSession().createQuery(
+    public boolean existsByUserName(Session session, String username) {
+        Long count = session.createQuery(
                 "SELECT COUNT(u) FROM User u WHERE u.username = :username", Long.class
         ).setParameter("username", username).uniqueResult();
-        return  count > 0;
+        return count != null && count > 0;
     }
 
-    public boolean existsByEmail(String email){
-        Long count = sessionFactory.getCurrentSession().createQuery(
-                "SELECT COUNT(u) FROM User u WHERE u.email=:email", Long.class
-                ).setParameter("email", email).uniqueResult();
-
-
-
-        return count > 0;
-
+    @Override
+    public boolean existsByEmail(Session session, String email){
+        Long count = session.createQuery(
+                "SELECT COUNT(u) FROM User u WHERE u.email = :email", Long.class
+        ).setParameter("email", email).uniqueResult();
+        return count != null && count > 0;
     }
 }

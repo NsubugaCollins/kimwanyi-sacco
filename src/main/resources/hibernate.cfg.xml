@@ -16,6 +16,14 @@
         <mapping class="org.kimwanyi.sacco.entity.User"/>
         <mapping class="org.kimwanyi.sacco.entity.Role"/>
         <mapping class="org.kimwanyi.sacco.entity.Permission"/>
+        <mapping class="org.kimwanyi.sacco.entity.Member"/>
+        <mapping class="org.kimwanyi.sacco.entity.SavingsAccount"/>
+        <mapping class="org.kimwanyi.sacco.entity.SavingsTransaction"/>
+        <mapping class="org.kimwanyi.sacco.entity.Loan"/>
+        <mapping class="org.kimwanyi.sacco.entity.LoanRepayment"/>
+        <mapping class="org.kimwanyi.sacco.entity.LedgerAccount"/>
+        <mapping class="org.kimwanyi.sacco.entity.JournalEntry"/>
+        <mapping class="org.kimwanyi.sacco.entity.JournalLine"/>
 
     </session-factory>
 </hibernate-configuration>

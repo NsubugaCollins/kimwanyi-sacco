@@ -12,6 +12,7 @@ import org.kimwanyi.sacco.repository.RoleRepository;
 import org.kimwanyi.sacco.repository.UserRepository;
 import org.kimwanyi.sacco.security.PasswordEncoder;
 import org.kimwanyi.sacco.service.AuditService;
+import org.kimwanyi.sacco.util.TransactionManager;
 import org.kimwanyi.sacco.validation.UserValidator;
 
 import java.time.LocalDateTime;
@@ -35,130 +36,108 @@ public class UserServiceImpl {
     }
 
     public UserResponse createUser(CreateUserRequest request){
-        //validate DTO
         User user = userMapper.toEntity(request);
         userValidator.validate(user);
-
-        //validate password
         userValidator.validatePassword(request.getUsername(), request.getPassword());
 
-        //password confirmation
         if(!request.getPassword().equals(request.getConfirmPassword())){
             throw new ValidationException("Passwords do not match");
         }
 
-        //check duplicate username
-        if(userRepository.existsByUserName(request.getUsername())){
-            throw new ValidationException("Username already exists");
-        }
+        return TransactionManager.execute(session -> {
+            if(userRepository.existsByUserName(session, request.getUsername())){
+                throw new ValidationException("Username already exists");
+            }
 
-        //check duplicate email
-        if(userRepository.existsByEmail(request.getEmail())){
-            throw new ValidationException("Email already exists");
-        }
+            if(userRepository.existsByEmail(session, request.getEmail())){
+                throw new ValidationException("Email already exists");
+            }
 
-        //encrypt password
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            user.setPasswordChangedAt(LocalDateTime.now());
+            user.setStatus(UserStatus.ACTIVE);
 
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setPasswordChangedAt(LocalDateTime.now());
-        user.setStatus(UserStatus.ACTIVE);
+            Role role = roleRepository.findById(session, request.getRoleId())
+                    .orElseThrow(() -> new ValidationException("Role not found"));
+            user.addRole(role);
 
-        //assign role
-        Role role = roleRepository.findById(request.getRoleId())
-                .orElseThrow(() ->
-                        new ValidationException("Role not found")
-                );
-        user.addRole(role);
-
-        //save
-        User savedUser = userRepository.save(user);
-        return userMapper.toResponse(savedUser);
+            User savedUser = userRepository.save(session, user);
+            return userMapper.toResponse(savedUser);
+        });
     }
 
     public UserResponse updateUser(UpdateUserRequest request){
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() ->
-                        new ValidationException("User not found")
-                );
+        return TransactionManager.execute(session -> {
+            User user = userRepository.findById(session, request.getUserId())
+                    .orElseThrow(() -> new ValidationException("User not found"));
 
-        user.setEmail(request.getEmail());
-        userRepository.update(user);
-        return userMapper.toResponse(user);
+            user.setEmail(request.getEmail());
+            userRepository.update(session, user);
+            return userMapper.toResponse(user);
+        });
     }
 
     public void deactivateUser(Long userId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ValidationException("User not found")
-                );
+        TransactionManager.execute(session -> {
+            User user = userRepository.findById(session, userId)
+                    .orElseThrow(() -> new ValidationException("User not found"));
 
-        if(user == null){
-            throw new ValidationException("user not found");
-        }
-        user.setStatus(UserStatus.INACTIVE);
-        userRepository.update(user);
+            user.setStatus(UserStatus.INACTIVE);
+            userRepository.update(session, user);
+            return null;
+        });
     }
 
     public void activateUser(Long userId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ValidationException("User not found")
-                );
+        TransactionManager.execute(session -> {
+            User user = userRepository.findById(session, userId)
+                    .orElseThrow(() -> new ValidationException("User not found"));
 
-        if(user == null){
-            throw new ValidationException("user not found");
-        }
-        user.setStatus(UserStatus.ACTIVE);
-        userRepository.update(user);
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.update(session, user);
+            return null;
+        });
     }
 
     public void assignRole(Long userId, Long roleId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ValidationException("User not found")
-                );
+        TransactionManager.execute(session -> {
+            User user = userRepository.findById(session, userId)
+                    .orElseThrow(() -> new ValidationException("User not found"));
 
-        Role role = roleRepository.findById(userId).orElseThrow(()
-        -> new ValidationException("role not found"));
-        if(user == null || role == null){
-            throw new ValidationException("user or role not found");
-        }
-        user.addRole(role);
-        userRepository.update(user);
+            Role role = roleRepository.findById(session, roleId)
+                    .orElseThrow(() -> new ValidationException("Role not found"));
+
+            user.addRole(role);
+            userRepository.update(session, user);
+            return null;
+        });
     }
 
     public UserResponse findById(Long userId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ValidationException("User not found")
-                );
-        if(user == null){
-            throw new ValidationException("User not found");
-        }
-        return userMapper.toResponse(user);
+        return TransactionManager.execute(session -> {
+            User user = userRepository.findById(session, userId)
+                    .orElseThrow(() -> new ValidationException("User not found"));
+            return userMapper.toResponse(user);
+        });
     }
 
     public UserResponse findByUsername(String username){
-       User user = userRepository.findByUserName(username);
-       if(user == null){
-           throw new ValidationException("user not found");
-       }
-       return userMapper.toResponse(user);
-
+        return TransactionManager.execute(session -> {
+            User user = userRepository.findByUserName(session, username);
+            if(user == null){
+                throw new ValidationException("User not found");
+            }
+            return userMapper.toResponse(user);
+        });
     }
 
     public List<UserResponse> findAll(){
-        return userRepository.findAll().stream().map(userMapper::toResponse).toList();
+        return TransactionManager.execute(session -> {
+            return userRepository.findAll(session).stream().map(userMapper::toResponse).toList();
+        });
     }
 
-
-    public void removeRole(
-            Long userId,
-            Long roleId
-    ){
-
-        // implement after adding removeRole()
-        // helper method in User entity
-
+    public void removeRole(Long userId, Long roleId){
+        // implement after adding removeRole() helper method in User entity
     }
 }

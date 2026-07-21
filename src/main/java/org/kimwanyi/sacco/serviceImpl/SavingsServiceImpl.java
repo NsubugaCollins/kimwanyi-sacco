@@ -1,5 +1,6 @@
 package org.kimwanyi.sacco.serviceImpl;
 
+import org.hibernate.Session;
 import org.kimwanyi.sacco.dto.savings.DepositRequest;
 import org.kimwanyi.sacco.dto.savings.SavingsResponse;
 import org.kimwanyi.sacco.dto.savings.WithdrawalRequest;
@@ -13,6 +14,7 @@ import org.kimwanyi.sacco.repository.MemberRepository;
 import org.kimwanyi.sacco.repository.SavingsAccountRepository;
 import org.kimwanyi.sacco.repository.SavingsTransactionRepository;
 import org.kimwanyi.sacco.service.SavingsService;
+import org.kimwanyi.sacco.util.TransactionManager;
 import org.kimwanyi.sacco.validation.SavingsValidator;
 
 import java.math.BigDecimal;
@@ -47,80 +49,89 @@ public class SavingsServiceImpl implements SavingsService {
             throw new ValidationException("Account number is required.");
         }
 
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ValidationException("Member not found with ID: " + memberId));
+        return TransactionManager.execute(session -> {
+            Member member = memberRepository.findById(session, memberId)
+                    .orElseThrow(() -> new ValidationException("Member not found with ID: " + memberId));
 
-        if (savingsAccountRepository.existsByAccountNumber(accountNumber.trim())) {
-            throw new ValidationException("Savings account number already exists: " + accountNumber);
-        }
+            if (savingsAccountRepository.existsByAccountNumber(session, accountNumber.trim())) {
+                throw new ValidationException("Savings account number already exists: " + accountNumber);
+            }
 
-        SavingsAccount account = new SavingsAccount();
-        account.setAccountNumber(accountNumber.trim());
-        account.setMember(member);
-        account.setStatus(AccountStatus.ACTIVE);
+            SavingsAccount account = new SavingsAccount();
+            account.setAccountNumber(accountNumber.trim());
+            account.setMember(member);
+            account.setStatus(AccountStatus.ACTIVE);
 
-        SavingsAccount savedAccount = savingsAccountRepository.save(account);
-        return toResponse(savedAccount);
+            SavingsAccount savedAccount = savingsAccountRepository.save(session, account);
+            return toResponse(savedAccount);
+        });
     }
 
     @Override
     public SavingsResponse deposit(DepositRequest request) {
-        savingsValidator.validateDeposit(request);
+        return TransactionManager.execute(session -> {
+            savingsValidator.validateDeposit(session, request);
 
-        SavingsAccount account = findAccountByRequest(request.getAccountId(), request.getAccountNumber());
-        savingsValidator.validateAccountActive(account);
+            SavingsAccount account = findAccountByRequest(session, request.getAccountId(), request.getAccountNumber());
+            savingsValidator.validateAccountActive(account);
 
-        SavingsTransaction transaction = new SavingsTransaction(
-                account,
-                TransactionType.DEPOSIT,
-                request.getAmount(),
-                request.getDescription(),
-                request.getReferenceNumber()
-        );
+            SavingsTransaction transaction = new SavingsTransaction(
+                    account,
+                    TransactionType.DEPOSIT,
+                    request.getAmount(),
+                    request.getDescription(),
+                    request.getReferenceNumber()
+            );
 
-        account.addTransaction(transaction);
-        savingsTransactionRepository.save(transaction);
+            account.addTransaction(transaction);
+            savingsTransactionRepository.save(session, transaction);
 
-        return toResponse(account);
+            return toResponse(account);
+        });
     }
 
     @Override
     public SavingsResponse withdraw(WithdrawalRequest request) {
-        savingsValidator.validateWithdrawal(request);
+        return TransactionManager.execute(session -> {
+            savingsValidator.validateWithdrawal(session, request);
 
-        SavingsAccount account = findAccountByRequest(request.getAccountId(), request.getAccountNumber());
-        savingsValidator.validateAccountActive(account);
+            SavingsAccount account = findAccountByRequest(session, request.getAccountId(), request.getAccountNumber());
+            savingsValidator.validateAccountActive(account);
 
-        // Banking principle: Derive current balance from financial transactions
-        BigDecimal currentBalance = account.getBalance();
-        savingsValidator.validateSufficientBalance(currentBalance, request.getAmount());
+            BigDecimal currentBalance = account.getBalance();
+            savingsValidator.validateSufficientBalance(currentBalance, request.getAmount());
 
-        SavingsTransaction transaction = new SavingsTransaction(
-                account,
-                TransactionType.WITHDRAW,
-                request.getAmount(),
-                request.getDescription(),
-                request.getReferenceNumber()
-        );
+            SavingsTransaction transaction = new SavingsTransaction(
+                    account,
+                    TransactionType.WITHDRAW,
+                    request.getAmount(),
+                    request.getDescription(),
+                    request.getReferenceNumber()
+            );
 
-        account.addTransaction(transaction);
-        savingsTransactionRepository.save(transaction);
+            account.addTransaction(transaction);
+            savingsTransactionRepository.save(session, transaction);
 
-        return toResponse(account);
+            return toResponse(account);
+        });
     }
 
     @Override
     public BigDecimal getBalance(Long accountId) {
-        SavingsAccount account = savingsAccountRepository.findById(accountId)
-                .orElseThrow(() -> new ValidationException("Savings account not found with ID: " + accountId));
-        return account.getBalance();
+        return TransactionManager.execute(session -> {
+            SavingsAccount account = savingsAccountRepository.findById(session, accountId)
+                    .orElseThrow(() -> new ValidationException("Savings account not found with ID: " + accountId));
+            return account.getBalance();
+        });
     }
 
     @Override
     public SavingsResponse getAccountDetails(Long accountId) {
-        SavingsAccount account = savingsAccountRepository.findById(accountId)
-                .orElseThrow(() -> new ValidationException("Savings account not found with ID: " + accountId));
-        return toResponse(account);
+        return TransactionManager.execute(session -> {
+            SavingsAccount account = savingsAccountRepository.findById(session, accountId)
+                    .orElseThrow(() -> new ValidationException("Savings account not found with ID: " + accountId));
+            return toResponse(account);
+        });
     }
 
     @Override
@@ -128,17 +139,19 @@ public class SavingsServiceImpl implements SavingsService {
         if (accountNumber == null || accountNumber.isBlank()) {
             throw new ValidationException("Account number is required.");
         }
-        SavingsAccount account = savingsAccountRepository.findByAccountNumber(accountNumber.trim())
-                .orElseThrow(() -> new ValidationException("Savings account not found: " + accountNumber));
-        return toResponse(account);
+        return TransactionManager.execute(session -> {
+            SavingsAccount account = savingsAccountRepository.findByAccountNumber(session, accountNumber.trim())
+                    .orElseThrow(() -> new ValidationException("Savings account not found: " + accountNumber));
+            return toResponse(account);
+        });
     }
 
-    private SavingsAccount findAccountByRequest(Long accountId, String accountNumber) {
+    private SavingsAccount findAccountByRequest(Session session, Long accountId, String accountNumber) {
         if (accountId != null) {
-            return savingsAccountRepository.findById(accountId)
+            return savingsAccountRepository.findById(session, accountId)
                     .orElseThrow(() -> new ValidationException("Savings account not found with ID: " + accountId));
         } else if (accountNumber != null && !accountNumber.isBlank()) {
-            return savingsAccountRepository.findByAccountNumber(accountNumber.trim())
+            return savingsAccountRepository.findByAccountNumber(session, accountNumber.trim())
                     .orElseThrow(() -> new ValidationException("Savings account not found with account number: " + accountNumber));
         }
         throw new ValidationException("Account identifier is required.");
@@ -155,7 +168,6 @@ public class SavingsServiceImpl implements SavingsService {
             response.setMemberName((firstName + " " + lastName).trim());
         }
         response.setStatus(account.getStatus());
-        // Balance is derived from transactions
         response.setBalance(account.getBalance());
 
         if (account.getTransactions() != null) {

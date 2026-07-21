@@ -1,5 +1,6 @@
 package org.kimwanyi.sacco.validation;
 
+import org.hibernate.Session;
 import org.kimwanyi.sacco.dto.savings.DepositRequest;
 import org.kimwanyi.sacco.dto.savings.WithdrawalRequest;
 import org.kimwanyi.sacco.entity.Member;
@@ -28,21 +29,29 @@ public class SavingsValidator {
     }
 
     public void validateDeposit(DepositRequest request) {
+        validateDeposit(null, request);
+    }
+
+    public void validateDeposit(Session session, DepositRequest request) {
         if (request == null) {
             throw new ValidationException("Deposit request cannot be null.");
         }
         validateAccountIdentifier(request.getAccountId(), request.getAccountNumber());
         validateAmount(request.getAmount(), "Deposit");
-        validateReferenceNumber(request.getReferenceNumber());
+        validateReferenceNumber(session, request.getReferenceNumber());
     }
 
     public void validateWithdrawal(WithdrawalRequest request) {
+        validateWithdrawal(null, request);
+    }
+
+    public void validateWithdrawal(Session session, WithdrawalRequest request) {
         if (request == null) {
             throw new ValidationException("Withdrawal request cannot be null.");
         }
         validateAccountIdentifier(request.getAccountId(), request.getAccountNumber());
         validateAmount(request.getAmount(), "Withdrawal");
-        validateReferenceNumber(request.getReferenceNumber());
+        validateReferenceNumber(session, request.getReferenceNumber());
     }
 
     public void validateAccountActive(SavingsAccount account) {
@@ -99,7 +108,7 @@ public class SavingsValidator {
         }
     }
 
-    private void validateReferenceNumber(String referenceNumber) {
+    private void validateReferenceNumber(Session session, String referenceNumber) {
         if (referenceNumber == null || referenceNumber.isBlank()) {
             throw new ValidationException("Transaction reference number is mandatory for audit and idempotency compliance.");
         }
@@ -107,7 +116,7 @@ public class SavingsValidator {
             throw new ValidationException("Transaction reference number cannot exceed 50 characters.");
         }
         // Bank-level idempotency / duplicate reference protection
-        if (savingsTransactionRepository != null && savingsTransactionRepository.existsByReferenceNumber(referenceNumber.trim())) {
+        if (savingsTransactionRepository != null && savingsTransactionRepository.existsByReferenceNumber(session, referenceNumber.trim())) {
             throw new DuplicateRecordException("Duplicate transaction reference number: " + referenceNumber + ". Transaction rejected to prevent double charge.");
         }
     }
