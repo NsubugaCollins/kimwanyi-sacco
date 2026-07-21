@@ -1,4 +1,4 @@
-package org.kimwanyi.sacco.security.password;
+package org.kimwanyi.sacco.security;
 
 import org.mindrot.jbcrypt.BCrypt;
 

@@ -36,4 +36,63 @@ public class Role extends BaseEntity {
     public Role() {
     }
 
+    public Role(String name) {
+        this.name = name;
+    }
+
+    public Role(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public Set<UserRole> getUserRoles() {
+        return userRoles;
+    }
+
+    public void setUserRoles(Set<UserRole> userRoles) {
+        this.userRoles = userRoles;
+    }
+
+    public Set<RolePermission> getRolePermissions() {
+        return rolePermissions;
+    }
+
+    public void setRolePermissions(Set<RolePermission> rolePermissions) {
+        this.rolePermissions = rolePermissions;
+    }
+
+    public void addPermission(Permission permission) {
+        RolePermission rolePermission = new RolePermission();
+        rolePermission.setRole(this);
+        rolePermission.setPermission(permission);
+        this.rolePermissions.add(rolePermission);
+    }
+
+    public void removePermission(Permission permission) {
+        this.rolePermissions.removeIf(rp -> rp.getPermission() != null && rp.getPermission().equals(permission));
+    }
 }

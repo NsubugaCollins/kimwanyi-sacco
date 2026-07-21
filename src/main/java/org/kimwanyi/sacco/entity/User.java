@@ -90,4 +90,17 @@ public class User extends BaseEntity{
         userRoles.add(userRole);
 
     }
+
+    public void lockAccount(int minutes){
+        this.accountLockedUntil = LocalDateTime.now().plusMinutes(minutes);
+
+    }
+
+    public void increaseFailedAttempts(){
+        failedLoginAttempts++;
+    }
+
+    public boolean hasReachedMaxAttempts(int maxAttempts){
+        return failedLoginAttempts >= maxAttempts;
+    }
 }

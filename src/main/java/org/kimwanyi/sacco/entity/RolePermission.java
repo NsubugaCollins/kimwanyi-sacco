@@ -1,7 +1,9 @@
 package org.kimwanyi.sacco.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "role_permission",
         uniqueConstraints = {
@@ -12,11 +14,11 @@ import jakarta.persistence.*;
 )
 public class RolePermission extends BaseEntity{
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "permission_id", nullable = false)
     private Permission permission;
 
