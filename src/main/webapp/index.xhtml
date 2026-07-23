@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, private"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title>Kimwanyi SACCO - GROW YOUR FINANCE</title>
+
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="#{request.contextPath}/resources/css/style.css"/>
+</h:head>
+
+<h:body>
+    <div class="welcome-page">
+        <!-- Top Navigation Header -->
+        <header class="welcome-header">
+            <a href="#{request.contextPath}/index.xhtml" class="welcome-brand">
+                <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="welcome-brand-logo-img"/>
+                <div>
+                    <div class="welcome-brand-text">Kimwanyi SACCO</div>
+                </div>
+            </a>
+
+            <!-- Right Top Corner Actions (Login / Register / Logout) -->
+            <div class="welcome-top-actions">
+                <h:panelGroup rendered="#{not authBean.isLoggedIn()}">
+                    <h:outputLink value="#{request.contextPath}/login.xhtml" styleClass="btn btn-primary" style="padding: 10px 24px; font-weight: 700; border-radius: 10px;">
+                        🔑 Login
+                    </h:outputLink>
+                    <h:outputLink value="#{request.contextPath}/register.xhtml" styleClass="btn btn-outline-light" style="padding: 10px 24px; font-weight: 700; border-radius: 10px; margin-left: 10px;">
+                        + Register
+                    </h:outputLink>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{authBean.isLoggedIn()}">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="text-align: right; color: #ffffff;">
+                            <div style="font-weight: 700; font-size: 15px;">#{authBean.loggedInUsername}</div>
+                            <div style="font-size: 12px; color: #60a5fa;">Role: #{authBean.roleDisplayName}</div>
+                        </div>
+                        <h:outputLink value="#{request.contextPath}/savings.xhtml" styleClass="btn btn-primary btn-sm" style="border-radius: 8px;">
+                            📊 Portal Dashboard
+                        </h:outputLink>
+                        <h:form style="display: inline;">
+                            <h:commandButton value="🚪 Logout" action="#{authBean.logout}" styleClass="btn btn-danger btn-sm" style="padding: 8px 18px; font-weight: 700; border-radius: 8px;"/>
+                        </h:form>
+                    </div>
+                </h:panelGroup>
+            </div>
+        </header>
+
+        <!-- Main Hero & Vision Centerpiece -->
+        <main class="welcome-hero">
+            <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="hero-logo-img"/>
+
+            <div class="motto-badge">
+                ✨ GROW YOUR FINANCE
+            </div>
+
+            <h1 class="sacco-title">KIMWANYI SACCO</h1>
+
+            <div class="vision-card">
+                <div class="vision-title">Our Vision &amp; Mission Statement</div>
+                <p class="vision-text">
+                    "To empower our members and local communities through accessible savings, low-interest micro-credit solutions, transparent financial governance, and sustainable wealth creation for a prosperous future."
+                </p>
+            </div>
+
+            <!-- SACCO Key Pillars & Services Grid -->
+            <div class="welcome-grid">
+                <div class="feature-pill">
+                    <div class="feature-icon">💰</div>
+                    <div class="feature-heading">Savings Accounts</div>
+                    <div class="feature-desc">Flexible deposit plans, competitive interest growth, and secure instant liquidity for every member.</div>
+                </div>
+
+                <div class="feature-pill">
+                    <div class="feature-icon">📜</div>
+                    <div class="feature-heading">Low Interest Credit</div>
+                    <div class="feature-desc">Transparent loan products tailored for personal growth, agricultural expansion, and business development.</div>
+                </div>
+
+                <div class="feature-pill">
+                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-heading">Transparent Auditing</div>
+                    <div class="feature-desc">Bank-grade security, real-time audit trails, automated ledger records, and instant SMS/Email notifications.</div>
+                </div>
+            </div>
+
+            <!-- Call to Action Footer / Action Links -->
+            <div style="margin-top: 48px; display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                <h:panelGroup rendered="#{not authBean.isLoggedIn()}">
+                    <h:outputLink value="#{request.contextPath}/register.xhtml" styleClass="btn btn-primary" style="padding: 14px 36px; font-size: 16px; font-weight: 700; border-radius: 12px; box-shadow: 0 10px 25px rgba(37,99,235,0.4);">
+                        Become a Member Today
+                    </h:outputLink>
+                    <h:outputLink value="#{request.contextPath}/login.xhtml" styleClass="btn btn-outline-light" style="padding: 14px 36px; font-size: 16px; font-weight: 700; border-radius: 12px;">
+                        Access Member Account
+                    </h:outputLink>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{authBean.isLoggedIn()}">
+                    <h:outputLink value="#{request.contextPath}/savings.xhtml" styleClass="btn btn-primary" style="padding: 14px 36px; font-size: 16px; font-weight: 700; border-radius: 12px; box-shadow: 0 10px 25px rgba(37,99,235,0.4);">
+                        Enter Savings Portal
+                    </h:outputLink>
+                    <h:outputLink value="#{request.contextPath}/loans.xhtml" styleClass="btn btn-outline-light" style="padding: 14px 36px; font-size: 16px; font-weight: 700; border-radius: 12px;">
+                        Apply / View Credit Facilities
+                    </h:outputLink>
+                </h:panelGroup>
+            </div>
+
+        </main>
+
+        <!-- Customer Care & Contact Info Footer -->
+        <footer class="welcome-footer">
+            <div class="footer-container">
+                <div class="footer-grid">
+                    <!-- Column 1: Brand & Motto -->
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                            <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="footer-brand-logo-img"/>
+                            <span style="font-size: 20px; font-weight: 800; color: #ffffff;">Kimwanyi SACCO</span>
+                        </div>
+                        <div style="color: #60a5fa; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; margin-bottom: 12px;">✨ GROW YOUR FINANCE</div>
+                        <p style="font-size: 14px; color: #94a3b8; line-height: 1.6;">
+                            Empowering our members through financial inclusion, modern savings schemes, transparent credit facilities, and sustainable community growth.
+                        </p>
+                    </div>
+
+                    <!-- Column 2: Customer Care & Contacts -->
+                    <div>
+                        <h4 class="footer-col-title">Customer Care &amp; Support</h4>
+                        <div class="footer-contact-item">
+                            <span class="footer-icon">📧</span>
+                            <div>
+                                <div style="font-size: 12px; color: #64748b; font-weight: 600;">Email Support</div>
+                                <a href="mailto:collinsnsubuga.ug@gmail.com">collinsnsubuga.ug@gmail.com</a>
+                            </div>
+                        </div>
+                        <div class="footer-contact-item">
+                            <span class="footer-icon">📞</span>
+                            <div>
+                                <div style="font-size: 12px; color: #64748b; font-weight: 600;">Hotline / Phone</div>
+                                <a href="tel:+256777721569">+256 777 721 569</a>
+                            </div>
+                        </div>
+                        <div class="footer-contact-item">
+                            <span class="footer-icon">💬</span>
+                            <div>
+                                <div style="font-size: 12px; color: #64748b; font-weight: 600;">24/7 Member Helpdesk</div>
+                                <span style="color: #cbd5e1;">Available for all financial inquiries</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Physical Location -->
+                    <div>
+                        <h4 class="footer-col-title">Head Office Location</h4>
+                        <div class="footer-contact-item">
+                            <span class="footer-icon">📍</span>
+                            <div>
+                                <div style="font-size: 12px; color: #64748b; font-weight: 600;">Physical Address</div>
+                                <span>Factory Road, Ntinda, Nakawa</span><br/>
+                                <span>Kampala Capital City, Kampala</span><br/>
+                                <span>Central Region, Uganda</span>
+                            </div>
+                        </div>
+                        <div class="footer-contact-item">
+                            <span class="footer-icon">🕒</span>
+                            <div>
+                                <div style="font-size: 12px; color: #64748b; font-weight: 600;">Working Hours</div>
+                                <span>Mon - Fri: 8:00 AM - 5:00 PM</span><br/>
+                                <span>Sat: 9:00 AM - 1:00 PM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 4: Quick Links -->
+                    <div>
+                        <h4 class="footer-col-title">Quick Links</h4>
+                        <ul class="footer-links">
+                            <li><a href="#{request.contextPath}/index.xhtml">Home Welcome Page</a></li>
+                            <li><a href="#{request.contextPath}/login.xhtml">Member Portal Login</a></li>
+                            <li><a href="#{request.contextPath}/register.xhtml">Register As Member</a></li>
+                            <li><a href="#{request.contextPath}/savings.xhtml">Savings Schemes</a></li>
+                            <li><a href="#{request.contextPath}/loans.xhtml">Credit &amp; Loans</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Footer Bottom Copyright -->
+                <div class="footer-bottom">
+                    <div>
+                        © 2026 <strong>Kimwanyi SACCO Financial System</strong>. All rights reserved.
+                    </div>
+                    <div style="display: flex; gap: 20px;">
+                        <a href="#" style="color: #64748b; text-decoration: none;">Privacy Policy</a>
+                        <a href="#" style="color: #64748b; text-decoration: none;">Terms of Service</a>
+                        <a href="#" style="color: #64748b; text-decoration: none;">Audit Governance</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JS Helper Script -->
+    <script src="#{request.contextPath}/resources/js/app.js"></script>
+</h:body>
+</html>

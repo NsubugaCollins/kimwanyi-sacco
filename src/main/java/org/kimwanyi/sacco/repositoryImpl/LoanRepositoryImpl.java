@@ -22,6 +22,11 @@ public class LoanRepositoryImpl extends GenericRepositoryImpl<Loan, Long> implem
 
     @Override
     public List<Loan> findByStatus(Session session, LoanStatus status) {
+        if (status == null) {
+            return session.createQuery(
+                    "FROM Loan l ORDER BY l.createdAt DESC", Loan.class
+            ).getResultList();
+        }
         return session.createQuery(
                 "FROM Loan l WHERE l.status = :status ORDER BY l.createdAt DESC", Loan.class
         ).setParameter("status", status).getResultList();

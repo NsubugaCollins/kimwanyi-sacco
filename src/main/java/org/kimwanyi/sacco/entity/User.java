@@ -20,8 +20,8 @@ import java.util.Set;
 public class User extends BaseEntity{
 
     @NotBlank(message = "Username is required")
-    @Size(min = 5, max = 15)
-    @Column(nullable = false, length = 30)
+    @Size(min = 2, max = 100, message = "Username must be between 2 and 100 characters")
+    @Column(nullable = false, length = 100)
     private String username;
 
     @NotBlank(message = "Email is required")
@@ -48,6 +48,15 @@ public class User extends BaseEntity{
 
     @Column(name = "password_changed_at")
     private LocalDateTime passwordChangedAt;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "verification_token", length = 100)
+    private String verificationToken;
+
+    @Column(name = "verification_token_expiry")
+    private LocalDateTime verificationTokenExpiry;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL,
             orphanRemoval = true, fetch = FetchType.LAZY

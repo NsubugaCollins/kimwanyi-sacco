@@ -8,6 +8,6 @@
     </appender>
 
     <root level="INFO">
-     <appender-ref ref="console"/>
+        <appender-ref ref="CONSOLE"/>
     </root>
 </configuration>

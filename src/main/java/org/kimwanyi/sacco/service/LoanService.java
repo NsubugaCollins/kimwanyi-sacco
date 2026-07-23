@@ -13,6 +13,9 @@ public interface LoanService {
     LoanResponse approveOrRejectLoan(LoanApprovalRequest request);
     LoanResponse disburseLoan(Long loanId, Long officerUserId);
     LoanResponse repayLoan(LoanPaymentRequest request);
+    LoanResponse approveRepayment(Long repaymentId, Long cashierUserId);
+    LoanResponse rejectRepayment(Long repaymentId, Long cashierUserId, String reason);
+    List<LoanResponse.RepaymentDto> getPendingRepayments();
     LoanResponse getLoanById(Long loanId);
     List<LoanResponse> getLoansByMember(Long memberId);
     List<LoanResponse> getLoansByStatus(LoanStatus status);

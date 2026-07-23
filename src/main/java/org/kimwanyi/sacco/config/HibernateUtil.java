@@ -15,6 +15,8 @@ public class HibernateUtil {
                             .buildSessionFactory();
         }
         catch(Throwable e){
+            System.err.println("[HibernateUtil] FATAL: SessionFactory creation failed: " + e.getMessage());
+            e.printStackTrace(System.err);
             sessionFactory = null;
         }
     }

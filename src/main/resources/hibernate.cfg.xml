@@ -9,7 +9,7 @@
         <property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
         <property name="hibernate.show_sql">false</property>
         <property name="hibernate.format_sql">true</property>
-        <property name="hibernate.hbm2ddl.auto">validate</property>
+        <property name="hibernate.hbm2ddl.auto">update</property>
         <property name="hibernate.current_session_context_class">thread</property>
 
 
@@ -24,6 +24,9 @@
         <mapping class="org.kimwanyi.sacco.entity.LedgerAccount"/>
         <mapping class="org.kimwanyi.sacco.entity.JournalEntry"/>
         <mapping class="org.kimwanyi.sacco.entity.JournalLine"/>
-
+        <mapping class="org.kimwanyi.sacco.entity.Notification"/>
+        <mapping class="org.kimwanyi.sacco.entity.RolePermission"/>
+        <mapping class="org.kimwanyi.sacco.entity.UserRole"/>
+        <mapping class="org.kimwanyi.sacco.audit.AuditLog"/>
     </session-factory>
 </hibernate-configuration>

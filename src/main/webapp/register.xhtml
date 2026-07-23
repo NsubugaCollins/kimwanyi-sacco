@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Register Account - Kimwanyi SACCO</title>
+    <link rel="stylesheet" href="#{request.contextPath}/resources/css/style.css"/>
+</h:head>
+
+<h:body style="background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    
+    <div style="width: 100%; max-width: 550px; background: #ffffff; border-radius: var(--radius-lg); padding: 36px; box-shadow: var(--shadow-xl);">
+        
+        <div style="text-align: center; margin-bottom: 24px;">
+            <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="auth-brand-logo-img"/>
+            <h2 style="font-size: 22px; margin-bottom: 4px;">Create SACCO Account</h2>
+            <p style="font-size: 13px; color: var(--text-muted);">Register your profile and select your role access</p>
+        </div>
+
+        <h:panelGroup id="alertMessage">
+            <h:panelGroup rendered="#{not empty authBean.errorMessage}">
+                <div style="padding: 12px 16px; background: var(--danger-100); color: var(--danger-600); border-radius: var(--radius-md); font-size: 13px; font-weight: 600; margin-bottom: 20px;">
+                    #{authBean.errorMessage}
+                </div>
+            </h:panelGroup>
+        </h:panelGroup>
+
+        <h:form id="registerForm">
+
+            <!-- Register As Dropdown -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label class="form-label">Register As *</label>
+                <h:selectOneMenu value="#{authBean.selectedRole}" styleClass="form-control" style="font-weight: 600;">
+                    <f:selectItem itemValue="MEMBER"       itemLabel="&#x1F9D1; SACCO Member (Customer / Account Holder)"/>
+                    <f:selectItem itemValue="LOAN_OFFICER" itemLabel="&#x1F4CB; Loans Officer (Staff — Credit &amp; Approvals)"/>
+                    <f:selectItem itemValue="CASHIER"      itemLabel="&#x1F4B0; Cashier (Staff — Teller &amp; Counter)"/>
+                    <f:selectItem itemValue="MANAGER"      itemLabel="&#x1F4BC; Manager (Staff — Branch Management)"/>
+                    <f:selectItem itemValue="ADMIN"        itemLabel="&#x2699; System Administrator (Staff — IT)"/>
+                    <f:ajax render="roleDynamicFields"/>
+                </h:selectOneMenu>
+            </div>
+
+            <!-- Dynamic Section -->
+            <h:panelGroup id="roleDynamicFields">
+
+                <!-- CUSTOMER (MEMBER) — stored in 'members' table -->
+                <h:panelGroup rendered="#{authBean.selectedRole eq 'MEMBER'}">
+
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">First Name *</label>
+                            <h:inputText value="#{authBean.memberFirstName}" styleClass="form-control" placeholder="e.g. John" required="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name *</label>
+                            <h:inputText value="#{authBean.memberLastName}" styleClass="form-control" placeholder="e.g. Mukasa" required="true"/>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">National ID (NIN)</label>
+                            <h:inputText value="#{authBean.memberNationalId}" styleClass="form-control" placeholder="e.g. CM9988776655AB"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Phone Number</label>
+                            <h:inputText value="#{authBean.memberPhone}" styleClass="form-control" placeholder="+256 700 123 456"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label">Physical Address</label>
+                        <h:inputText value="#{authBean.memberAddress}" styleClass="form-control" placeholder="Plot 12, Kampala Rd"/>
+                    </div>
+                </h:panelGroup>
+
+
+
+                <!-- COMMON FIELDS -->
+                <h:panelGroup rendered="#{authBean.selectedRole eq 'MEMBER'}">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label">Login Username (Membership No. / Email / Phone) *</label>
+                        <h:inputText value="#{authBean.username}" styleClass="form-control" placeholder="e.g. MEM-12345 or john@email.com" required="true"/>
+                        <small style="color: var(--text-muted); font-size: 11px;">You can log in using your membership number, email or phone.</small>
+                    </div>
+                </h:panelGroup>
+                <h:panelGroup rendered="#{authBean.selectedRole ne 'MEMBER'}">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label">Staff Username *</label>
+                        <h:inputText value="#{authBean.username}" styleClass="form-control" placeholder="e.g. jmukasa" required="true"/>
+                    </div>
+                </h:panelGroup>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label">Email Address *</label>
+                    <h:inputText value="#{authBean.email}" styleClass="form-control" placeholder="name@example.com" required="true"/>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 24px;">
+                    <div class="form-group">
+                        <label class="form-label">Password *</label>
+                        <h:inputSecret value="#{authBean.password}" styleClass="form-control" placeholder="••••••••" required="true"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password *</label>
+                        <h:inputSecret value="#{authBean.confirmPassword}" styleClass="form-control" placeholder="••••••••" required="true"/>
+                    </div>
+                </div>
+
+            </h:panelGroup>
+
+            <h:commandButton value="Register &#x26A1; Create Account" action="#{authBean.register}"
+                             styleClass="btn btn-primary" style="width: 100%; padding: 13px; font-size: 15px;"/>
+        </h:form>
+
+        <div style="margin-top: 24px; text-align: center; font-size: 14px; color: var(--text-muted);">
+            Already have an account?
+            <h:outputLink value="#{request.contextPath}/login.xhtml" style="color: var(--primary-600); font-weight: 600; text-decoration: none;">Sign In</h:outputLink>
+        </div>
+    </div>
+
+</h:body>
+</html>

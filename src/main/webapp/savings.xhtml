@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Savings Management</ui:define>
+
+    <ui:define name="content">
+
+        <!-- Notification Alerts -->
+        <h:panelGroup rendered="#{not empty savingsBean.message}">
+            <div class="alert alert-success">
+                &#x2705; #{savingsBean.message}
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty savingsBean.errorMessage}">
+            <div class="alert alert-danger">
+                &#x26A0;&#xFE0F; #{savingsBean.errorMessage}
+            </div>
+        </h:panelGroup>
+
+        <!-- ================================================================= -->
+        <!-- 1. MANAGER / ADMINISTRATOR VIEW                                   -->
+        <!-- ================================================================= -->
+        <h:panelGroup rendered="#{authBean.isManager() or authBean.isAdmin()}">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">&#x1F4CA; SACCO Savings &amp; Portfolio Performance</h1>
+                    <p class="page-subtitle">Comprehensive financial statistics, total SACCO savings balance, and member portfolio metrics.</p>
+                </div>
+                <div class="page-actions">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="openModal('createSavingsModal')">+ Create Account</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('depositModal')">↓ Counter Deposit</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('withdrawModal')">↑ Counter Withdrawal</button>
+                </div>
+            </div>
+
+            <!-- 4 Portfolio Performance Metrics Cards -->
+            <div class="savings-metrics-grid">
+                <div class="savings-metric-card highlight-blue">
+                    <div class="metric-top">
+                        <span class="metric-title">Total SACCO Savings Portfolio</span>
+                        <div class="metric-icon-box blue">&#x1F4B0;</div>
+                    </div>
+                    <div class="metric-value">UGX #{savingsBean.totalSaccoBalanceFormatted}</div>
+                    <div class="metric-footer text-green">
+                        <span>&#x2191; +12.4%</span>
+                        <span style="color: var(--text-muted);">vs last quarter</span>
+                    </div>
+                </div>
+
+                <div class="savings-metric-card highlight-green">
+                    <div class="metric-top">
+                        <span class="metric-title">Active Member Accounts</span>
+                        <div class="metric-icon-box green">&#x1F465;</div>
+                    </div>
+                    <div class="metric-value">#{savingsBean.totalActiveAccounts}</div>
+                    <div class="metric-footer text-green">
+                        <span>&#x2714; 100% Verified</span>
+                        <span style="color: var(--text-muted);">Accounts</span>
+                    </div>
+                </div>
+
+                <div class="savings-metric-card highlight-amber">
+                    <div class="metric-top">
+                        <span class="metric-title">Average Member Balance</span>
+                        <div class="metric-icon-box amber">&#x1F4CA;</div>
+                    </div>
+                    <div class="metric-value">UGX #{savingsBean.averageBalanceFormatted}</div>
+                    <div class="metric-footer text-blue">
+                        <span>Per SACCO Member</span>
+                    </div>
+                </div>
+
+                <div class="savings-metric-card highlight-purple">
+                    <div class="metric-top">
+                        <span class="metric-title">Monthly Contributions Vol.</span>
+                        <div class="metric-icon-box purple">&#x1F4B8;</div>
+                    </div>
+                    <div class="metric-value">UGX #{savingsBean.totalMonthlyDepositsFormatted}</div>
+                    <div class="metric-footer text-purple">
+                        <span>Est. Monthly Savings</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SACCO Member Savings Accounts Directory Table -->
+            <div class="card-panel">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h3 class="panel-title">&#x1F4D8; SACCO Member Savings Directory</h3>
+                        <span style="font-size: 12px; color: var(--text-muted);">Database records across all registered member accounts</span>
+                    </div>
+
+                    <!-- Search Filter Bar -->
+                    <h:form style="display: flex; gap: 8px;">
+                        <h:inputText value="#{savingsBean.searchKeyword}" 
+                                     styleClass="form-input-sm" 
+                                     placeholder="Search member or account #..."/>
+                        <h:commandButton value="Search" styleClass="btn btn-outline btn-sm">
+                            <f:ajax execute="@form" render=":managerAccountsTableForm"/>
+                        </h:commandButton>
+                    </h:form>
+                </div>
+
+                <h:form id="managerAccountsTableForm">
+                    <div class="panel-body" style="padding: 0; overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Account #</th>
+                                    <th>Member Name</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Current Balance (UGX)</th>
+                                    <th style="text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{savingsBean.filteredAccounts}" var="acc">
+                                    <tr>
+                                        <td>
+                                            <span class="account-num-chip">#{acc.accountNumber}</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight: 600; color: var(--text-main);">#{acc.memberName}</div>
+                                            <div style="font-size: 11px; color: var(--text-muted);">Member ID: ##{acc.memberId != null ? acc.memberId : 'N/A'}</div>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-active">&#x25CF; #{acc.status != null ? acc.status : 'ACTIVE'}</span>
+                                        </td>
+                                        <td style="text-align: right; font-weight: 700; font-size: 15px; color: var(--primary-700);">
+                                            UGX #{acc.balance}
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <h:commandLink styleClass="btn-inspect" title="Inspect Account Portfolio">
+                                                <f:ajax listener="#{savingsBean.selectAccountForDetail(acc)}" render=":accountDetailModalForm"/>
+                                                &#x1F50D; Inspect
+                                            </h:commandLink>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <ui:fragment rendered="#{empty savingsBean.filteredAccounts}">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                                            &#x1F4CB; No member savings accounts found matching your search.
+                                        </td>
+                                    </tr>
+                                </ui:fragment>
+                            </tbody>
+                        </table>
+                    </div>
+                </h:form>
+            </div>
+        </h:panelGroup>
+
+        <!-- ================================================================= -->
+        <!-- 2. CASHIER / TELLER VIEW                                          -->
+        <!-- ================================================================= -->
+        <h:panelGroup rendered="#{authBean.isCashier() and not (authBean.isManager() or authBean.isAdmin())}">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">&#x1F4B5; Teller Cash Counter &amp; Savings Operations</h1>
+                    <p class="page-subtitle">Process counter cash deposits, withdrawals, and member account transactions.</p>
+                </div>
+            </div>
+
+            <!-- Teller Counter Daily Metrics -->
+            <div class="savings-metrics-grid">
+                <div class="savings-metric-card highlight-green">
+                    <div class="metric-top">
+                        <span class="metric-title">Today's Counter Deposits</span>
+                        <div class="metric-icon-box green">&#x2193;</div>
+                    </div>
+                    <div class="metric-value">UGX #{savingsBean.todayTellerDepositsFormatted}</div>
+                    <div class="metric-footer text-green">Processed at counter today</div>
+                </div>
+
+                <div class="savings-metric-card highlight-amber">
+                    <div class="metric-top">
+                        <span class="metric-title">Today's Counter Withdrawals</span>
+                        <div class="metric-icon-box amber">&#x2191;</div>
+                    </div>
+                    <div class="metric-value">UGX #{savingsBean.todayTellerWithdrawalsFormatted}</div>
+                    <div class="metric-footer text-red">Disbursed at counter today</div>
+                </div>
+            </div>
+
+            <!-- Pending Deposit Approvals Queue Card -->
+            <div class="card-panel" style="margin-bottom: 24px;">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 class="panel-title" style="color: #d97706;">&#x23F3; Pending Member Deposit Approvals Queue</h3>
+                        <span style="font-size: 12px; color: var(--text-muted);">Deposits submitted by members awaiting cashier verification</span>
+                    </div>
+                    <span class="status-badge status-pending" style="font-size: 13px; padding: 4px 12px;">
+                        #{savingsBean.pendingDeposits.size()} Pending
+                    </span>
+                </div>
+                <h:form id="pendingDepositsFormCashier">
+                    <div class="panel-body" style="padding: 0; overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref #</th>
+                                    <th>Description</th>
+                                    <th style="text-align: right;">Amount (UGX)</th>
+                                    <th>Status</th>
+                                    <th style="text-align: center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{savingsBean.pendingDeposits}" var="dep">
+                                    <tr>
+                                        <td><span class="account-num-chip">#{dep.referenceNumber}</span></td>
+                                        <td>#{dep.description}</td>
+                                        <td style="text-align: right; font-weight: 700; color: var(--success-600);">
+                                            UGX #{dep.amount}
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-pending">&#x25CF; PENDING APPROVAL</span>
+                                        </td>
+                                        <td style="text-align: center; white-space: nowrap;">
+                                            <h:commandButton value="✔ Approve" action="#{savingsBean.approveDeposit(dep.id)}" styleClass="btn btn-success btn-xs" style="margin-right: 6px;"/>
+                                            <h:commandButton value="✖ Reject" action="#{savingsBean.rejectDeposit(dep.id, 'Counter verification failed')}" styleClass="btn btn-danger btn-xs"/>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <ui:fragment rendered="#{empty savingsBean.pendingDeposits}">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 30px 20px; color: var(--text-muted);">
+                                            &#x2714; No pending deposit approvals in queue.
+                                        </td>
+                                    </tr>
+                                </ui:fragment>
+                            </tbody>
+                        </table>
+                    </div>
+                </h:form>
+            </div>
+
+            <!-- Deposit & Withdrawal Counter Cards Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+                <!-- Deposit Form -->
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">↓ Deposit Funds</h3>
+                    </div>
+                    <div class="panel-body">
+                        <h:form>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label">Account ID</label>
+                                <h:inputText value="#{savingsBean.depositRequest.accountId}" styleClass="form-control" placeholder="e.g. 101"/>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label">Deposit Amount (UGX)</label>
+                                <h:inputText value="#{savingsBean.depositRequest.amount}" styleClass="form-control" placeholder="Amount in UGX"/>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label">Reference Number</label>
+                                <h:inputText value="#{savingsBean.depositRequest.referenceNumber}" styleClass="form-control" placeholder="Receipt / Ref #"/>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label class="form-label">Description</label>
+                                <h:inputText value="#{savingsBean.depositRequest.description}" styleClass="form-control" placeholder="Monthly contribution"/>
+                            </div>
+                            <h:commandButton value="Post Deposit" action="#{savingsBean.deposit}" styleClass="btn btn-primary" style="width: 100%;"/>
+                        </h:form>
+                    </div>
+                </div>
+
+                <!-- Withdrawal Form -->
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">↑ Withdraw Funds</h3>
+                    </div>
+                    <div class="panel-body">
+                        <h:form>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label">Account ID</label>
+                                <h:inputText value="#{savingsBean.withdrawalRequest.accountId}" styleClass="form-control" placeholder="e.g. 101"/>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label">Withdrawal Amount (UGX)</label>
+                                <h:inputText value="#{savingsBean.withdrawalRequest.amount}" styleClass="form-control" placeholder="Amount in UGX"/>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label">Reference Number</label>
+                                <h:inputText value="#{savingsBean.withdrawalRequest.referenceNumber}" styleClass="form-control" placeholder="Ref #"/>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label class="form-label">Description</label>
+                                <h:inputText value="#{savingsBean.withdrawalRequest.description}" styleClass="form-control" placeholder="Cash withdrawal"/>
+                            </div>
+                            <h:commandButton value="Process Withdrawal" action="#{savingsBean.withdraw}" styleClass="btn btn-secondary" style="width: 100%;"/>
+                        </h:form>
+                    </div>
+                </div>
+            </div>
+        </h:panelGroup>
+
+        <!-- ================================================================= -->
+        <!-- 3. LOAN OFFICER VIEW                                              -->
+        <!-- ================================================================= -->
+        <h:panelGroup rendered="#{authBean.isLoanOfficer() and not (authBean.isManager() or authBean.isCashier() or authBean.isAdmin())}">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">&#x1F50D; Member Savings Verification &amp; Collateral Directory</h1>
+                    <p class="page-subtitle">Inspect member savings balances and account standing for credit evaluation and loan appraisal.</p>
+                </div>
+            </div>
+
+            <div class="card-panel">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <h3 class="panel-title">&#x1F4D8; SACCO Member Savings Standings</h3>
+                    <h:form style="display: flex; gap: 8px;">
+                        <h:inputText value="#{savingsBean.searchKeyword}" styleClass="form-input-sm" placeholder="Search member or account #..."/>
+                        <h:commandButton value="Filter" styleClass="btn btn-outline btn-sm">
+                            <f:ajax execute="@form" render=":loanOfficerAccountsTableForm"/>
+                        </h:commandButton>
+                    </h:form>
+                </div>
+
+                <h:form id="loanOfficerAccountsTableForm">
+                    <div class="panel-body" style="padding: 0; overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Account #</th>
+                                    <th>Member Name</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Savings Balance (UGX)</th>
+                                    <th style="text-align: center;">Collateral Standing</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{savingsBean.filteredAccounts}" var="acc">
+                                    <tr>
+                                        <td><span class="account-num-chip">#{acc.accountNumber}</span></td>
+                                        <td><strong>#{acc.memberName}</strong></td>
+                                        <td><span class="status-badge status-active">&#x25CF; ACTIVE</span></td>
+                                        <td style="text-align: right; font-weight: 700; color: var(--primary-700);">UGX #{acc.balance}</td>
+                                        <td style="text-align: center;">
+                                            <span class="status-badge status-active">&#x2714; Verified</span>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                            </tbody>
+                        </table>
+                    </div>
+                </h:form>
+            </div>
+        </h:panelGroup>
+
+        <!-- ================================================================= -->
+        <!-- 4. REGULAR MEMBER VIEW                                            -->
+        <!-- ================================================================= -->
+        <h:panelGroup rendered="#{authBean.isMember() and not authBean.isStaff()}">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">&#x1F4B0; My Savings Account</h1>
+                    <p class="page-subtitle">View your personal SACCO savings account balance, account details, and transaction history.</p>
+                </div>
+            </div>
+
+            <!-- Member Personal Savings Card Banner -->
+            <h:panelGroup rendered="#{not empty savingsBean.selectedAccount}">
+                <div class="card-panel" style="background: linear-gradient(135deg, var(--primary-800) 0%, var(--primary-600) 100%); color: #ffffff; margin-bottom: 24px;">
+                    <div class="panel-body">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                            <div>
+                                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-100);">Savings Account Holder</div>
+                                <h2 style="font-size: 24px; color: #ffffff; margin: 4px 0;">#{authBean.loggedInUsername}</h2>
+                                <div style="font-size: 14px; color: var(--primary-100);">Account #: #{savingsBean.selectedAccount.accountNumber}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-100);">Available Savings Balance</div>
+                                <div style="font-size: 32px; font-weight: 800; color: #ffffff;">UGX #{savingsBean.selectedAccount.balance}</div>
+                                <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">* Balance updates upon cashier approval of deposits</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </h:panelGroup>
+
+            <!-- Member Personal Savings Transactions Table -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">&#x1F4D8; Recent Savings Transactions History</h3>
+                </div>
+                <div class="panel-body" style="padding: 0; overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date &amp; Time</th>
+                                <th>Transaction Type</th>
+                                <th>Reference #</th>
+                                <th>Description</th>
+                                <th>Approval Status</th>
+                                <th style="text-align: right;">Amount (UGX)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ui:repeat value="#{savingsBean.memberTransactions}" var="tx">
+                                <tr>
+                                    <td>#{tx.createdAt}</td>
+                                    <td>
+                                        <span class="status-badge #{tx.type == 'DEPOSIT' ? 'status-active' : 'status-failed'}">
+                                            #{tx.type}
+                                        </span>
+                                    </td>
+                                    <td><span class="account-num-chip">#{tx.referenceNumber}</span></td>
+                                    <td>#{tx.description}</td>
+                                    <td>
+                                        <span class="status-badge #{tx.approvalStatus == 'PENDING' ? 'status-pending' : (tx.approvalStatus == 'REJECTED' ? 'status-failed' : 'status-active')}">
+                                            #{tx.approvalStatus == 'PENDING' ? '⏳ PENDING APPROVAL' : (tx.approvalStatus == 'REJECTED' ? '✖ REJECTED' : '✔ APPROVED')}
+                                        </span>
+                                    </td>
+                                    <td style="text-align: right; font-weight: 700; color: #{tx.type == 'DEPOSIT' ? 'var(--success-600)' : 'var(--danger-600)'};">
+                                        #{tx.type == 'DEPOSIT' ? '+' : '-'} UGX #{tx.amount}
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                            <ui:fragment rendered="#{empty savingsBean.memberTransactions}">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                                        No recent transactions found.
+                                    </td>
+                                </tr>
+                            </ui:fragment>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </h:panelGroup>
+
+        <!-- ACCOUNT INSPECTOR DETAIL MODAL (Manager / Admin) -->
+        <h:form id="accountDetailModalForm">
+            <h:panelGroup rendered="#{not empty savingsBean.selectedAccountForDetail}">
+                <div class="modal-backdrop-custom">
+                    <div class="modal-card-custom">
+                        <div class="modal-header-custom">
+                            <h3>&#x1F4D8; Member Savings Portfolio Detail</h3>
+                            <h:commandLink action="#{savingsBean.clearDetailSelection}" styleClass="close-btn-custom">
+                                <f:ajax render=":accountDetailModalForm"/>
+                                &amp;times;
+                            </h:commandLink>
+                        </div>
+                        <div class="modal-body-custom">
+                            <div class="inspect-grid">
+                                <div>
+                                    <span class="inspect-label">Account Number</span>
+                                    <div class="inspect-val">#{savingsBean.selectedAccountForDetail.accountNumber}</div>
+                                </div>
+                                <div>
+                                    <span class="inspect-label">Member Name</span>
+                                    <div class="inspect-val font-bold">#{savingsBean.selectedAccountForDetail.memberName}</div>
+                                </div>
+                                <div>
+                                    <span class="inspect-label">Account Status</span>
+                                    <div class="inspect-val text-green">ACTIVE</div>
+                                </div>
+                                <div>
+                                    <span class="inspect-label">Current Balance</span>
+                                    <div class="inspect-val text-blue font-bold">UGX #{savingsBean.selectedAccountForDetail.balance}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer-custom">
+                            <h:commandButton value="Close Inspector" action="#{savingsBean.clearDetailSelection}" styleClass="btn btn-outline btn-sm">
+                                <f:ajax render=":accountDetailModalForm"/>
+                            </h:commandButton>
+                        </div>
+                    </div>
+                </div>
+            </h:panelGroup>
+        </h:form>
+
+        <!-- MODAL: Create New Savings Account (Manager/Admin) -->
+        <div id="createSavingsModal" class="modal-backdrop-custom" style="display: none;">
+            <div class="modal-card-custom">
+                <div class="modal-header-custom">
+                    <h3 style="font-size: 18px;">Create New Member Savings Account</h3>
+                    <button type="button" class="close-btn-custom" onclick="closeModal('createSavingsModal')">&amp;times;</button>
+                </div>
+                <h:form>
+                    <div class="modal-body-custom">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">Member ID *</label>
+                            <h:inputText value="#{savingsBean.memberId}" styleClass="form-control" required="true" placeholder="e.g. 1"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Savings Account Number *</label>
+                            <h:inputText value="#{savingsBean.accountNumber}" styleClass="form-control" required="true" placeholder="e.g. SAV-100200"/>
+                        </div>
+                    </div>
+                    <div class="modal-footer-custom">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('createSavingsModal')">Cancel</button>
+                        <h:commandButton value="Create Account" action="#{savingsBean.createAccount}" styleClass="btn btn-primary btn-sm"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+
+        <!-- MODAL: Counter Deposit Funds -->
+        <div id="depositModal" class="modal-backdrop-custom" style="display: none;">
+            <div class="modal-card-custom">
+                <div class="modal-header-custom">
+                    <h3 style="font-size: 18px;">↓ Counter Cash Deposit</h3>
+                    <button type="button" class="close-btn-custom" onclick="closeModal('depositModal')">&amp;times;</button>
+                </div>
+                <h:form>
+                    <div class="modal-body-custom">
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">Account ID</label>
+                            <h:inputText value="#{savingsBean.depositRequest.accountId}" styleClass="form-control" placeholder="e.g. 101"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">Deposit Amount (UGX)</label>
+                            <h:inputText value="#{savingsBean.depositRequest.amount}" styleClass="form-control" placeholder="Amount in UGX"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">Reference Number</label>
+                            <h:inputText value="#{savingsBean.depositRequest.referenceNumber}" styleClass="form-control" placeholder="Ref #"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <h:inputText value="#{savingsBean.depositRequest.description}" styleClass="form-control" placeholder="Deposit notes"/>
+                        </div>
+                    </div>
+                    <div class="modal-footer-custom">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('depositModal')">Cancel</button>
+                        <h:commandButton value="Post Deposit" action="#{savingsBean.deposit}" styleClass="btn btn-primary btn-sm"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+
+        <!-- MODAL: Counter Withdraw Funds -->
+        <div id="withdrawModal" class="modal-backdrop-custom" style="display: none;">
+            <div class="modal-card-custom">
+                <div class="modal-header-custom">
+                    <h3 style="font-size: 18px;">↑ Counter Cash Withdrawal</h3>
+                    <button type="button" class="close-btn-custom" onclick="closeModal('withdrawModal')">&amp;times;</button>
+                </div>
+                <h:form>
+                    <div class="modal-body-custom">
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">Account ID</label>
+                            <h:inputText value="#{savingsBean.withdrawalRequest.accountId}" styleClass="form-control" placeholder="e.g. 101"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">Withdrawal Amount (UGX)</label>
+                            <h:inputText value="#{savingsBean.withdrawalRequest.amount}" styleClass="form-control" placeholder="Amount in UGX"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">Reference Number</label>
+                            <h:inputText value="#{savingsBean.withdrawalRequest.referenceNumber}" styleClass="form-control" placeholder="Ref #"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <h:inputText value="#{savingsBean.withdrawalRequest.description}" styleClass="form-control" placeholder="Withdrawal notes"/>
+                        </div>
+                    </div>
+                    <div class="modal-footer-custom">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('withdrawModal')">Cancel</button>
+                        <h:commandButton value="Process Withdrawal" action="#{savingsBean.withdraw}" styleClass="btn btn-secondary btn-sm"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+
+        <!-- Inline JS Modal Helpers -->
+        <script>
+            function openModal(id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = 'flex';
+            }
+            function closeModal(id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            }
+        </script>
+
+        <!-- Custom Styling for Savings Page -->
+        <style>
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 24px;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .page-title {
+                font-size: 24px;
+                font-weight: 700;
+                color: var(--text-main);
+                margin: 0 0 4px 0;
+            }
+            .page-subtitle {
+                font-size: 14px;
+                color: var(--text-muted);
+                margin: 0;
+            }
+            .page-actions { display: flex; gap: 8px; }
+
+            .alert {
+                padding: 14px 20px; border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;
+            }
+            .alert-success { background: var(--success-100); color: var(--success-600); }
+            .alert-danger { background: var(--danger-100); color: var(--danger-600); }
+
+            /* Metrics Grid */
+            .savings-metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 18px;
+                margin-bottom: 24px;
+            }
+            .savings-metric-card {
+                background: #ffffff;
+                border-radius: var(--radius-md);
+                padding: 20px;
+                border: 1px solid var(--border-color);
+                box-shadow: var(--shadow-sm);
+                transition: var(--transition-fast);
+            }
+            .savings-metric-card:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md);
+            }
+            .metric-top {
+                display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+            }
+            .metric-title { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+            .metric-icon-box {
+                width: 38px; height: 38px; border-radius: 8px;
+                display: flex; align-items: center; justify-content: center; font-size: 18px;
+            }
+            .metric-icon-box.blue { background: var(--primary-100); color: var(--primary-600); }
+            .metric-icon-box.green { background: var(--success-100); color: var(--success-600); }
+            .metric-icon-box.amber { background: var(--warning-100); color: var(--warning-600); }
+            .metric-icon-box.purple { background: #f3e8ff; color: #9333ea; }
+
+            .metric-value {
+                font-size: 26px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;
+            }
+            .metric-footer { font-size: 12px; font-weight: 600; }
+            .text-green { color: var(--success-600); }
+            .text-red { color: var(--danger-600); }
+            .text-blue { color: var(--primary-600); }
+            .text-purple { color: #9333ea; }
+
+            .account-num-chip {
+                font-family: monospace; font-size: 13px; font-weight: 700; padding: 3px 8px;
+                background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; color: #1d4ed8;
+            }
+            .status-badge {
+                display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
+            }
+            .status-active { background: #dcfce7; color: #15803d; }
+            .status-failed { background: #fee2e2; color: #b91c1c; }
+
+            .btn-inspect {
+                color: var(--primary-600); font-weight: 600; font-size: 12px; text-decoration: none;
+                padding: 4px 10px; border-radius: 4px; background: rgba(37, 99, 235, 0.08);
+            }
+            .btn-inspect:hover { background: rgba(37, 99, 235, 0.18); }
+
+            .form-input-sm {
+                padding: 6px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px;
+            }
+
+            /* Custom Modal Styles */
+            .modal-backdrop-custom {
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 999;
+                display: flex; align-items: center; justify-content: center; padding: 20px;
+            }
+            .modal-card-custom {
+                background: #ffffff; border-radius: var(--radius-lg); width: 100%; max-width: 500px;
+                box-shadow: var(--shadow-xl); overflow: hidden;
+            }
+            .modal-header-custom {
+                padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid var(--border-color);
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .modal-header-custom h3 { margin: 0; }
+            .close-btn-custom {
+                background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); text-decoration: none;
+            }
+            .modal-body-custom { padding: 20px; }
+            .modal-footer-custom {
+                padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border-color); text-align: right;
+            }
+            .inspect-grid {
+                display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+            }
+            .inspect-label {
+                font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);
+            }
+            .inspect-val { font-size: 14px; color: var(--text-main); margin-top: 4px; }
+        </style>
+
+    </ui:define>
+</ui:composition>

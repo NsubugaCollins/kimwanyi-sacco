@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.kimwanyi.sacco.enums.AccountStatus;
+import org.kimwanyi.sacco.enums.ApprovalStatus;
 import org.kimwanyi.sacco.enums.TransactionType;
 
 import java.math.BigDecimal;
@@ -57,7 +58,7 @@ public class SavingsAccount extends BaseEntity {
     }
 
     /**
-     * Derives the current balance dynamically from all recorded financial transactions.
+     * Derives the current balance dynamically from all approved financial transactions.
      * DEPOSIT transactions add to the balance; WITHDRAW transactions subtract from it.
      */
     public BigDecimal getBalance() {
@@ -67,10 +68,13 @@ public class SavingsAccount extends BaseEntity {
         BigDecimal balance = BigDecimal.ZERO;
         for (SavingsTransaction tx : transactions) {
             if (tx.getAmount() != null) {
-                if (tx.getType() == TransactionType.DEPOSIT) {
-                    balance = balance.add(tx.getAmount());
-                } else if (tx.getType() == TransactionType.WITHDRAW) {
-                    balance = balance.subtract(tx.getAmount());
+                // Only consider approved transactions (or null for legacy records)
+                if (tx.getApprovalStatus() == null || tx.getApprovalStatus() == ApprovalStatus.APPROVED) {
+                    if (tx.getType() == TransactionType.DEPOSIT) {
+                        balance = balance.add(tx.getAmount());
+                    } else if (tx.getType() == TransactionType.WITHDRAW) {
+                        balance = balance.subtract(tx.getAmount());
+                    }
                 }
             }
         }

@@ -21,18 +21,25 @@ public class UserRole extends BaseEntity{
     private Role role;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "permission_id", nullable = false)
+    @JoinColumn(name = "permission_id", nullable = true)
     private Permission permission;
-
 
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(nullable = false)
+    @Column(name = "expiryDate", nullable = true)
     private LocalDateTime expiryDate;
 
     public UserRole(){
+        this.active = true;
+        this.expiryDate = LocalDateTime.now().plusYears(10);
+    }
 
+    public UserRole(User user, Role role){
+        this.user = user;
+        this.role = role;
+        this.active = true;
+        this.expiryDate = LocalDateTime.now().plusYears(10);
     }
 
     public User getUser() {
