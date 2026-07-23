@@ -18,16 +18,25 @@ public class EmailServiceImpl implements EmailService {
     private final String username;
     private final String password;
 
+
+    private static String cfg(String sysProp, String envVar, String fallback) {
+        String sys = System.getProperty(sysProp);
+        if (sys != null && !sys.isBlank()) return sys;
+        String env = System.getenv(envVar);
+        if (env != null && !env.isBlank()) return env;
+        return fallback;
+    }
+
     public EmailServiceImpl() {
         this.mailProperties = new Properties();
-        this.mailProperties.put("mail.smtp.host", System.getProperty("mail.smtp.host", "localhost"));
-        this.mailProperties.put("mail.smtp.port", System.getProperty("mail.smtp.port", "25"));
-        this.mailProperties.put("mail.smtp.auth", System.getProperty("mail.smtp.auth", "false"));
-        this.mailProperties.put("mail.smtp.starttls.enable", System.getProperty("mail.smtp.starttls.enable", "false"));
+        this.mailProperties.put("mail.smtp.host",           cfg("mail.smtp.host",           "MAIL_SMTP_HOST",     "localhost"));
+        this.mailProperties.put("mail.smtp.port",           cfg("mail.smtp.port",           "MAIL_SMTP_PORT",     "587"));
+        this.mailProperties.put("mail.smtp.auth",           cfg("mail.smtp.auth",           "MAIL_SMTP_AUTH",     "false"));
+        this.mailProperties.put("mail.smtp.starttls.enable",cfg("mail.smtp.starttls.enable","MAIL_SMTP_STARTTLS", "false"));
 
-        this.fromAddress = System.getProperty("mail.from", "noreply@kimwanyi-sacco.org");
-        this.username = System.getProperty("mail.smtp.username", "");
-        this.password = System.getProperty("mail.smtp.password", "");
+        this.fromAddress = cfg("mail.from",          "MAIL_FROM",          "noreply@kimwanyi-sacco.org");
+        this.username    = cfg("mail.smtp.username", "MAIL_SMTP_USERNAME", "");
+        this.password    = cfg("mail.smtp.password", "MAIL_SMTP_PASSWORD", "");
     }
 
     public EmailServiceImpl(Properties customProperties, String fromAddress, String username, String password) {

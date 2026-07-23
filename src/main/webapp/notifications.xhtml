@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Notification &amp; Email Center</ui:define>
+
+    <ui:define name="content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Notifications &amp; Communications</h1>
+                <p class="page-description">In-app notifications center &amp; outbound email dispatcher for members and staff.</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <h:form style="display: inline;">
+                    <h:commandButton value="✓ Mark All Read" action="#{notificationBean.markAllAsRead}" styleClass="btn btn-outline"/>
+                </h:form>
+                <button type="button" class="btn btn-primary" onclick="openModal('composeNotificationModal')">✉ Send Notification / Email</button>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <h:panelGroup rendered="#{not empty notificationBean.message}">
+            <div style="padding: 14px 20px; background: var(--success-100); color: var(--success-600); border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;">
+                #{notificationBean.message}
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty notificationBean.errorMessage}">
+            <div style="padding: 14px 20px; background: var(--danger-100); color: var(--danger-600); border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;">
+                #{notificationBean.errorMessage}
+            </div>
+        </h:panelGroup>
+
+        <!-- Notifications Log Panel -->
+        <div class="card-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">System &amp; Email Log</h3>
+                <input type="text" class="form-control table-search-input" data-table="notifTable" 
+                       placeholder="Filter by recipient, title or message..." style="max-width: 320px;"/>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+                <div class="table-responsive">
+                    <table class="data-table" id="notifTable">
+                        <thead>
+                            <tr>
+                                <th>Date &amp; Time</th>
+                                <th>Recipient Email</th>
+                                <th>Title</th>
+                                <th>Message</th>
+                                <th>Channel</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ui:repeat value="#{notificationBean.notifications}" var="n">
+                                <tr style="#{n.read ? '' : 'background: var(--primary-50); font-weight: 600;'}">
+                                    <td style="font-size: 12px; color: var(--text-muted);">#{n.createdAt}</td>
+                                    <td>#{n.recipientEmail}</td>
+                                    <td>#{n.title}</td>
+                                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">#{n.message}</td>
+                                    <td><span class="badge badge-active">#{n.channel}</span></td>
+                                    <td><span class="badge #{n.status eq 'SENT' ? 'badge-sent' : 'badge-pending'}">#{n.status}</span></td>
+                                    <td>
+                                        <h:form style="display: inline;" rendered="#{not n.read}">
+                                            <h:commandButton value="Mark Read" action="#{notificationBean.markAsRead(n.id)}" styleClass="btn btn-outline btn-sm"/>
+                                        </h:form>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                            <h:panelGroup rendered="#{empty notificationBean.notifications}">
+                                <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No notifications logged.</td></tr>
+                            </h:panelGroup>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compose Notification Modal -->
+        <div id="composeNotificationModal" class="modal-backdrop">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 style="font-size: 18px;">Dispatch Notification / Email</h3>
+                    <button type="button" class="modal-close" onclick="closeModal('composeNotificationModal')">✕</button>
+                </div>
+                <h:form>
+                    <div class="modal-body">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">Recipient User ID (Optional)</label>
+                            <h:inputText value="#{notificationBean.sendRequest.userId}" styleClass="form-control" placeholder="User ID e.g. 100"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">Recipient Email Address *</label>
+                            <h:inputText value="#{notificationBean.sendRequest.recipientEmail}" styleClass="form-control" placeholder="recipient@example.com"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">Notification Title / Subject *</label>
+                            <h:inputText value="#{notificationBean.sendRequest.title}" styleClass="form-control" required="true" placeholder="Subject..."/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Message Content *</label>
+                            <h:inputTextarea value="#{notificationBean.sendRequest.message}" styleClass="form-control" required="true" rows="4" placeholder="Write message body..."/>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('composeNotificationModal')">Cancel</button>
+                        <h:commandButton value="Dispatch Message" action="#{notificationBean.sendNotification}" styleClass="btn btn-primary"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+    </ui:define>
+</ui:composition>

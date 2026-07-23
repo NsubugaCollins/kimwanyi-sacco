@@ -52,3 +52,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Temporary Tomcat installation
+apache-tomcat*
+

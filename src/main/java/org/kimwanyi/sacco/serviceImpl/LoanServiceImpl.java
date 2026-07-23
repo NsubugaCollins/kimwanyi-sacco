@@ -1,23 +1,27 @@
 package org.kimwanyi.sacco.serviceImpl;
 
-import org.hibernate.Session;
 import org.kimwanyi.sacco.audit.AuditService;
 import org.kimwanyi.sacco.dto.loan.LoanApplicationRequest;
 import org.kimwanyi.sacco.dto.loan.LoanApprovalRequest;
 import org.kimwanyi.sacco.dto.loan.LoanPaymentRequest;
 import org.kimwanyi.sacco.dto.loan.LoanResponse;
+import org.kimwanyi.sacco.dto.notification.SendNotificationRequest;
 import org.kimwanyi.sacco.entity.Loan;
 import org.kimwanyi.sacco.entity.LoanRepayment;
 import org.kimwanyi.sacco.entity.Member;
 import org.kimwanyi.sacco.entity.User;
+import org.kimwanyi.sacco.enums.ApprovalStatus;
 import org.kimwanyi.sacco.enums.AuditAction;
 import org.kimwanyi.sacco.enums.LoanStatus;
+import org.kimwanyi.sacco.enums.NotificationChannel;
+import org.kimwanyi.sacco.enums.NotificationType;
 import org.kimwanyi.sacco.exception.ValidationException;
 import org.kimwanyi.sacco.repository.LoanRepaymentRepository;
 import org.kimwanyi.sacco.repository.LoanRepository;
 import org.kimwanyi.sacco.repository.MemberRepository;
 import org.kimwanyi.sacco.repository.UserRepository;
 import org.kimwanyi.sacco.service.LoanService;
+import org.kimwanyi.sacco.service.NotificationService;
 import org.kimwanyi.sacco.util.TransactionManager;
 import org.kimwanyi.sacco.validation.LoanValidator;
 
@@ -37,6 +41,7 @@ public class LoanServiceImpl implements LoanService {
     private final UserRepository userRepository;
     private final LoanValidator loanValidator;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     public LoanServiceImpl(
             LoanRepository loanRepository,
@@ -45,7 +50,7 @@ public class LoanServiceImpl implements LoanService {
             UserRepository userRepository,
             LoanValidator loanValidator
     ) {
-        this(loanRepository, loanRepaymentRepository, memberRepository, userRepository, loanValidator, null);
+        this(loanRepository, loanRepaymentRepository, memberRepository, userRepository, loanValidator, null, null);
     }
 
     public LoanServiceImpl(
@@ -56,12 +61,25 @@ public class LoanServiceImpl implements LoanService {
             LoanValidator loanValidator,
             AuditService auditService
     ) {
+        this(loanRepository, loanRepaymentRepository, memberRepository, userRepository, loanValidator, auditService, null);
+    }
+
+    public LoanServiceImpl(
+            LoanRepository loanRepository,
+            LoanRepaymentRepository loanRepaymentRepository,
+            MemberRepository memberRepository,
+            UserRepository userRepository,
+            LoanValidator loanValidator,
+            AuditService auditService,
+            NotificationService notificationService
+    ) {
         this.loanRepository = loanRepository;
         this.loanRepaymentRepository = loanRepaymentRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
         this.loanValidator = loanValidator;
         this.auditService = auditService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -204,18 +222,23 @@ public class LoanServiceImpl implements LoanService {
             loanValidator.validatePayment(session, request, loan);
 
             BigDecimal paymentAmount = request.getAmount();
-            BigDecimal newBalance = loan.getRemainingBalance().subtract(paymentAmount).setScale(2, RoundingMode.HALF_UP);
-            loan.setRemainingBalance(newBalance);
+            ApprovalStatus status = request.isRequiresApproval() ? ApprovalStatus.PENDING : ApprovalStatus.APPROVED;
 
-            if (newBalance.compareTo(BigDecimal.ZERO) == 0) {
-                loan.setStatus(LoanStatus.COMPLETED);
+            if (status == ApprovalStatus.APPROVED) {
+                BigDecimal newBalance = loan.getRemainingBalance().subtract(paymentAmount).setScale(2, RoundingMode.HALF_UP);
+                loan.setRemainingBalance(newBalance);
+
+                if (newBalance.compareTo(BigDecimal.ZERO) <= 0) {
+                    loan.setStatus(LoanStatus.COMPLETED);
+                }
             }
 
             LoanRepayment repayment = new LoanRepayment(
                     loan,
                     paymentAmount,
                     request.getReferenceNumber().trim(),
-                    request.getRemarks() != null ? request.getRemarks().trim() : null
+                    request.getRemarks() != null ? request.getRemarks().trim() : null,
+                    status
             );
 
             loan.addRepayment(repayment);
@@ -223,18 +246,138 @@ public class LoanServiceImpl implements LoanService {
 
             Loan updatedLoan = loanRepository.update(session, loan);
 
+            if (notificationService != null && status == ApprovalStatus.PENDING) {
+                try {
+                    SendNotificationRequest notifReq = new SendNotificationRequest();
+                    notifReq.setUserId(100L);
+                    notifReq.setTitle("Pending Loan Repayment Approval Request");
+                    notifReq.setMessage(String.format("New loan repayment of UGX %s for Loan #L-%d requires cashier approval. Ref: %s",
+                            paymentAmount.toPlainString(), loan.getId(), request.getReferenceNumber()));
+                    notifReq.setType(NotificationType.LOAN_REPAYMENT);
+                    notifReq.setChannel(NotificationChannel.SYSTEM);
+                    notificationService.sendNotification(notifReq);
+                } catch (Exception ignored) {}
+            }
+
             if (auditService != null) {
                 auditService.logSuccess(
                         loan.getMember() != null ? loan.getMember().getId() : null,
                         AuditAction.LOAN_REPAYMENT,
                         "LoanRepayment",
                         repayment.getId(),
-                        String.format("Repayment of %s recorded for Loan ID %d. Remaining balance: %s",
-                                paymentAmount.toPlainString(), loan.getId(), newBalance.toPlainString())
+                        String.format("Repayment of %s recorded (%s) for Loan ID %d.",
+                                paymentAmount.toPlainString(), status, loan.getId())
                 );
             }
 
             return toResponse(updatedLoan);
+        });
+    }
+
+    @Override
+    public LoanResponse approveRepayment(Long repaymentId, Long cashierUserId) {
+        if (repaymentId == null) {
+            throw new ValidationException("Repayment ID is required for approval.");
+        }
+        return TransactionManager.execute(session -> {
+            LoanRepayment repayment = loanRepaymentRepository.findById(session, repaymentId)
+                    .orElseThrow(() -> new ValidationException("Repayment not found with ID: " + repaymentId));
+
+            if (repayment.getApprovalStatus() != ApprovalStatus.PENDING) {
+                throw new ValidationException("Repayment is not pending approval.");
+            }
+
+            repayment.setApprovalStatus(ApprovalStatus.APPROVED);
+            repayment.setApprovedByUserId(cashierUserId);
+            repayment.setApprovedAt(LocalDateTime.now());
+
+            Loan loan = repayment.getLoan();
+            BigDecimal newBalance = loan.getRemainingBalance().subtract(repayment.getAmountPaid()).setScale(2, RoundingMode.HALF_UP);
+            if (newBalance.compareTo(BigDecimal.ZERO) < 0) newBalance = BigDecimal.ZERO;
+            loan.setRemainingBalance(newBalance);
+
+            if (newBalance.compareTo(BigDecimal.ZERO) == 0) {
+                loan.setStatus(LoanStatus.COMPLETED);
+            }
+
+            loanRepaymentRepository.update(session, repayment);
+            Loan updatedLoan = loanRepository.update(session, loan);
+
+            if (notificationService != null && loan.getMember() != null) {
+                try {
+                    SendNotificationRequest notifReq = new SendNotificationRequest();
+                    notifReq.setMemberId(loan.getMember().getId());
+                    notifReq.setTitle("Loan Repayment Approved");
+                    notifReq.setMessage(String.format("Your loan repayment of UGX %s (Ref: %s) for Loan #L-%d was approved. Remaining balance: UGX %s",
+                            repayment.getAmountPaid().toPlainString(), repayment.getReferenceNumber(), loan.getId(), newBalance.toPlainString()));
+                    notifReq.setType(NotificationType.LOAN_REPAYMENT);
+                    notifReq.setChannel(NotificationChannel.BOTH);
+                    notificationService.sendNotification(notifReq);
+                } catch (Exception ignored) {}
+            }
+
+            return toResponse(updatedLoan);
+        });
+    }
+
+    @Override
+    public LoanResponse rejectRepayment(Long repaymentId, Long cashierUserId, String reason) {
+        if (repaymentId == null) {
+            throw new ValidationException("Repayment ID is required for rejection.");
+        }
+        return TransactionManager.execute(session -> {
+            LoanRepayment repayment = loanRepaymentRepository.findById(session, repaymentId)
+                    .orElseThrow(() -> new ValidationException("Repayment not found with ID: " + repaymentId));
+
+            if (repayment.getApprovalStatus() != ApprovalStatus.PENDING) {
+                throw new ValidationException("Repayment is not pending approval.");
+            }
+
+            repayment.setApprovalStatus(ApprovalStatus.REJECTED);
+            repayment.setApprovedByUserId(cashierUserId);
+            repayment.setApprovedAt(LocalDateTime.now());
+            repayment.setRejectionReason(reason != null ? reason.trim() : "Rejected by cashier");
+
+            loanRepaymentRepository.update(session, repayment);
+            Loan loan = repayment.getLoan();
+
+            if (notificationService != null && loan.getMember() != null) {
+                try {
+                    SendNotificationRequest notifReq = new SendNotificationRequest();
+                    notifReq.setMemberId(loan.getMember().getId());
+                    notifReq.setTitle("Loan Repayment Rejected");
+                    notifReq.setMessage(String.format("Your loan repayment of UGX %s (Ref: %s) was rejected. Reason: %s",
+                            repayment.getAmountPaid().toPlainString(), repayment.getReferenceNumber(), repayment.getRejectionReason()));
+                    notifReq.setType(NotificationType.LOAN_REPAYMENT);
+                    notifReq.setChannel(NotificationChannel.BOTH);
+                    notificationService.sendNotification(notifReq);
+                } catch (Exception ignored) {}
+            }
+
+            return toResponse(loan);
+        });
+    }
+
+    @Override
+    public List<LoanResponse.RepaymentDto> getPendingRepayments() {
+        return TransactionManager.execute(session -> {
+            List<LoanRepayment> repayments = session.createQuery(
+                    "FROM LoanRepayment lr JOIN FETCH lr.loan l JOIN FETCH l.member m WHERE lr.approvalStatus = :status ORDER BY lr.paymentDate DESC",
+                    LoanRepayment.class)
+                    .setParameter("status", ApprovalStatus.PENDING)
+                    .getResultList();
+
+            return repayments.stream().map(r -> {
+                LoanResponse.RepaymentDto dto = new LoanResponse.RepaymentDto();
+                dto.setId(r.getId());
+                dto.setAmountPaid(r.getAmountPaid());
+                dto.setPaymentDate(r.getPaymentDate());
+                dto.setReferenceNumber(r.getReferenceNumber());
+                dto.setRemarks(r.getRemarks());
+                dto.setApprovalStatus(r.getApprovalStatus() != null ? r.getApprovalStatus() : ApprovalStatus.APPROVED);
+                dto.setRejectionReason(r.getRejectionReason());
+                return dto;
+            }).collect(Collectors.toList());
         });
     }
 
@@ -270,12 +413,13 @@ public class LoanServiceImpl implements LoanService {
         response.setId(loan.getId());
         if (loan.getMember() != null) {
             response.setMemberId(loan.getMember().getId());
+            response.setMembershipNumber(loan.getMember().getMembershipNumber());
             String firstName = loan.getMember().getFirstName() != null ? loan.getMember().getFirstName() : "";
             String lastName = loan.getMember().getLastName() != null ? loan.getMember().getLastName() : "";
             response.setMemberName((firstName + " " + lastName).trim());
         }
         response.setPrincipalAmount(loan.getPrincipalAmount());
-        response.setInterestRate(loan.getInterestRate());
+        response.setInterestRate(loan.getInterestRate() != null ? loan.getInterestRate().multiply(new java.math.BigDecimal("100")).setScale(1, java.math.RoundingMode.HALF_UP) : java.math.BigDecimal.ZERO);
         response.setTermInMonths(loan.getTermInMonths());
         response.setTotalInterest(loan.getTotalInterest());
         response.setTotalAmountPayable(loan.getTotalAmountPayable());
@@ -295,6 +439,8 @@ public class LoanServiceImpl implements LoanService {
                 dto.setPaymentDate(r.getPaymentDate());
                 dto.setReferenceNumber(r.getReferenceNumber());
                 dto.setRemarks(r.getRemarks());
+                dto.setApprovalStatus(r.getApprovalStatus() != null ? r.getApprovalStatus() : ApprovalStatus.APPROVED);
+                dto.setRejectionReason(r.getRejectionReason());
                 return dto;
             }).collect(Collectors.toList());
             response.setRecentRepayments(repaymentDtos);

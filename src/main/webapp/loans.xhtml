@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Loans &amp; Credit Management</ui:define>
+
+    <ui:define name="content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Loans &amp; Credit Facilities</h1>
+                <p class="page-description">Apply for a loan, track status, and manage repayments.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="toggleLoanForm()">+ Apply for Loan</button>
+        </div>
+
+        <!-- Feedback Banners -->
+        <h:panelGroup id="feedbackBannersGroup">
+            <h:panelGroup rendered="#{not empty loanBean.message}">
+                <div class="alert-success-banner">&#x2713; #{loanBean.message}</div>
+            </h:panelGroup>
+            <h:panelGroup rendered="#{not empty loanBean.errorMessage}">
+                <div class="alert-error-banner">&#x26A0; #{loanBean.errorMessage}</div>
+            </h:panelGroup>
+        </h:panelGroup>
+
+        <!-- ===== LOAN APPLICATION FORM (collapsible) ===== -->
+        <div id="loanApplicationSection" class="loan-application-section" style="display:none;">
+            <div class="loan-form-header">
+                <div>
+                    <h2 class="loan-form-title">&#x1F4CB; Apply for a Loan</h2>
+                    <p class="loan-form-subtitle">Welcome, <strong>#{loanBean.loggedInUsername}</strong> &#x2014; fill in the details below to submit your loan application to a loans officer.</p>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" onclick="toggleLoanForm()">&#x2715; Close</button>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="loan-info-panel">
+                <div class="loan-info-icon">&#x1F4A1;</div>
+                <div>
+                    <div class="loan-info-title">Loan Information</div>
+                    <ul class="loan-info-list">
+                        <li>Your savings balance: <strong>UGX <h:outputText value="#{loanBean.savingsBalance}"><f:convertNumber pattern="#,##0.00"/></h:outputText></strong></li>
+                        <li>Maximum loan amount: <strong>UGX <h:outputText value="#{loanBean.maxLoanAmount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></strong> (3&#x00D7; savings balance)</li>
+                        <li>Interest rate: <strong>5% flat rate per month</strong> of principal</li>
+                        <li>Repayment period: <strong>1&#x2013;60 months</strong> (1 month to 5 years)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h:form id="loanApplicationForm">
+                <!-- Section 0: Member Identification -->
+                <div class="loan-form-section" style="border-left: 4px solid var(--primary-600); background: #f8fafc;">
+                    <div class="loan-section-title">
+                        <span class="loan-section-icon">&#x1F464;</span> Registered Member Identification
+                    </div>
+                    <div class="loan-fields-grid">
+                        <h:panelGroup rendered="#{authBean.isManager() or authBean.isLoanOfficer() or authBean.isAdmin()}" styleClass="loan-field-group loan-field-full">
+                            <label class="loan-field-label">Select Registered Member *</label>
+                            <h:selectOneMenu value="#{loanBean.applicationRequest.memberId}" styleClass="loan-field-input">
+                                <f:selectItem itemLabel="-- Select Registered Member --" itemValue="" />
+                                <f:selectItems value="#{loanBean.registeredMembers}" var="m"
+                                               itemLabel="#{m.firstName} #{m.lastName} (ID: #{m.id} | No: #{m.membershipNumber})"
+                                               itemValue="#{m.id}" />
+                            </h:selectOneMenu>
+                        </h:panelGroup>
+                        <div class="loan-field-group loan-field-full">
+                            <div style="padding: 12px; border-radius: 8px; background: #ffffff; border: 1px solid #e2e8f0; display: flex; gap: 16px; align-items: center;">
+                                <div style="font-size: 24px;">&#x1F6A9;</div>
+                                <div>
+                                    <div style="font-size: 13px; font-weight: 700; color: #1e293b;">Active Member:</div>
+                                    <div style="font-size: 12px; color: #64748b;">
+                                        ID: <strong>#{loanBean.currentMemberInfo ne null ? loanBean.currentMemberInfo.id : 'Auto-linking'}</strong> |
+                                        No: <strong>#{loanBean.currentMemberInfo ne null ? loanBean.currentMemberInfo.membershipNumber : 'Pending'}</strong> |
+                                        Name: <strong>#{loanBean.currentMemberInfo ne null ? loanBean.currentMemberInfo.firstName : ''} #{loanBean.currentMemberInfo ne null ? loanBean.currentMemberInfo.lastName : loanBean.loggedInUsername}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 1: Loan Details -->
+                <div class="loan-form-section">
+                    <div class="loan-section-title"><span class="loan-section-icon">&#x1F4B8;</span> Loan Details</div>
+                    <div class="loan-fields-grid">
+                        <div class="loan-field-group loan-field-full">
+                            <label class="loan-field-label">Loan Amount (UGX) *</label>
+                            <h:inputText value="#{loanBean.applicationRequest.principalAmount}" styleClass="loan-field-input" required="true" placeholder="Enter amount in UGX"/>
+                        </div>
+                        <div class="loan-field-group loan-field-full">
+                            <label class="loan-field-label">Loan Purpose *</label>
+                            <h:inputTextarea value="#{loanBean.applicationRequest.purpose}" styleClass="loan-field-input loan-field-textarea" required="true" maxlength="500" placeholder="Describe what you need the loan for" rows="3"/>
+                        </div>
+                        <div class="loan-field-group loan-field-full">
+                            <label class="loan-field-label">Type of Loan</label>
+                            <div class="loan-type-grid">
+                                <label class="loan-type-card" id="ltype-personal">
+                                    <input type="radio" name="loanType" value="PERSONAL" checked="checked" onchange="selectLoanType('PERSONAL')" style="display:none;"/>
+                                    <span class="loan-type-icon">&#x1F3E0;</span><span class="loan-type-label">Personal</span>
+                                </label>
+                                <label class="loan-type-card" id="ltype-business">
+                                    <input type="radio" name="loanType" value="BUSINESS" onchange="selectLoanType('BUSINESS')" style="display:none;"/>
+                                    <span class="loan-type-icon">&#x1F3EA;</span><span class="loan-type-label">Business</span>
+                                </label>
+                                <label class="loan-type-card" id="ltype-emergency">
+                                    <input type="radio" name="loanType" value="EMERGENCY" onchange="selectLoanType('EMERGENCY')" style="display:none;"/>
+                                    <span class="loan-type-icon">&#x1F6A8;</span><span class="loan-type-label">Emergency</span>
+                                </label>
+                                <label class="loan-type-card" id="ltype-agriculture">
+                                    <input type="radio" name="loanType" value="AGRICULTURE" onchange="selectLoanType('AGRICULTURE')" style="display:none;"/>
+                                    <span class="loan-type-icon">&#x1F33E;</span><span class="loan-type-label">Agriculture</span>
+                                </label>
+                            </div>
+                            <div class="purpose-pills">
+                                <button type="button" class="purpose-pill" onclick="appendPurpose('Business expansion')">&#x1F3EA; Business expansion</button>
+                                <button type="button" class="purpose-pill" onclick="appendPurpose('School fees')">&#x1F393; School fees</button>
+                                <button type="button" class="purpose-pill" onclick="appendPurpose('Home renovation')">&#x1F3E0; Home renovation</button>
+                                <button type="button" class="purpose-pill" onclick="appendPurpose('Medical expenses')">&#x1F3E5; Medical expenses</button>
+                                <button type="button" class="purpose-pill" onclick="appendPurpose('Equipment purchase')">&#x2699;&#xFE0F; Equipment purchase</button>
+                                <button type="button" class="purpose-pill" onclick="appendPurpose('Agriculture inputs')">&#x1F33E; Agriculture</button>
+                            </div>
+                            <h:inputHidden value="#{loanBean.applicationRequest.loanType}" id="loanTypeHidden"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Repayment & Account -->
+                <div class="loan-form-section">
+                    <div class="loan-section-title"><span class="loan-section-icon">&#x1F4B3;</span> Repayment &amp; Account</div>
+                    <div class="loan-fields-grid">
+                        <div class="loan-field-group">
+                            <label class="loan-field-label">Account Number (bank transfers)</label>
+                            <h:inputText value="#{loanBean.applicationRequest.accountNumber}" styleClass="loan-field-input" placeholder="Enter account number (optional)"/>
+                        </div>
+                        <div class="loan-field-group">
+                            <label class="loan-field-label">Phone Number (mobile money)</label>
+                            <h:inputText value="#{loanBean.applicationRequest.phoneNumber}" styleClass="loan-field-input" placeholder="+256 700 000 000 (optional)"/>
+                        </div>
+                        <div class="loan-field-group">
+                            <label class="loan-field-label">Repayment Period (months) *</label>
+                            <h:inputText value="#{loanBean.applicationRequest.termInMonths}" styleClass="loan-field-input" required="true" placeholder="6"/>
+                        </div>
+                        <div class="loan-field-group">
+                            <label class="loan-field-label">Preferred Payment Mode</label>
+                            <div class="payment-mode-grid">
+                                <label class="payment-mode-btn active" id="pm-mpesa" onclick="selectPaymentMode('MPESA', this)"><span>&#x1F4F1;</span> MPESA</label>
+                                <label class="payment-mode-btn" id="pm-mtn" onclick="selectPaymentMode('MTN', this)"><span>&#x1F4F1;</span> MTN</label>
+                                <label class="payment-mode-btn" id="pm-airtel" onclick="selectPaymentMode('AIRTEL', this)"><span>&#x1F4F1;</span> Airtel</label>
+                                <label class="payment-mode-btn" id="pm-bank" onclick="selectPaymentMode('BANK_TRANSFER', this)"><span>&#x1F3E6;</span> Bank</label>
+                                <label class="payment-mode-btn" id="pm-cash" onclick="selectPaymentMode('CASH', this)"><span>&#x1F4B5;</span> Cash</label>
+                            </div>
+                            <h:inputHidden value="#{loanBean.applicationRequest.paymentMode}" id="paymentModeHidden"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Row -->
+                <div class="loan-submit-row">
+                    <button type="button" class="btn btn-outline" onclick="toggleLoanForm()">Cancel</button>
+                    <h:commandButton value="&#x1F4E4; Submit Application to Loans Officer"
+                                     action="#{loanBean.applyForLoan}"
+                                     styleClass="btn btn-primary btn-lg-submit"
+                                     onclick="syncHiddenFields()"/>
+                </div>
+            </h:form>
+        </div>
+
+        <!-- ===== PENDING LOAN REPAYMENTS APPROVAL QUEUE ===== -->
+        <h:panelGroup rendered="#{authBean.isCashier() or authBean.isManager() or authBean.isAdmin()}">
+            <div class="card-panel" style="margin-bottom: 24px;">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 class="panel-title" style="color: #d97706;">&#x23F3; Pending Member Loan Repayments Queue</h3>
+                        <span style="font-size: 12px; color: var(--text-muted);">Repayments submitted by members awaiting cashier verification</span>
+                    </div>
+                    <span class="badge badge-pending" style="font-size: 13px; padding: 4px 12px;">
+                        #{loanBean.pendingRepayments.size()} Pending
+                    </span>
+                </div>
+                <h:form id="pendingRepaymentsForm">
+                    <div class="panel-body" style="padding: 0; overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref #</th>
+                                    <th>Remarks / Loan</th>
+                                    <th>Payment Date</th>
+                                    <th style="text-align: right;">Amount Paid (UGX)</th>
+                                    <th>Approval Status</th>
+                                    <th style="text-align: center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{loanBean.pendingRepayments}" var="rep">
+                                    <tr>
+                                        <td><code>#{rep.referenceNumber}</code></td>
+                                        <td>#{rep.remarks}</td>
+                                        <td>#{rep.formattedPaymentDate}</td>
+                                        <td style="text-align: right; font-weight: 700; color: var(--success-600);">
+                                            UGX <h:outputText value="#{rep.amountPaid}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-pending">&#x25CF; PENDING APPROVAL</span>
+                                        </td>
+                                        <td style="text-align: center; white-space: nowrap;">
+                                            <h:commandButton value="✔ Approve" action="#{loanBean.approveRepayment(rep.id)}" styleClass="btn btn-success btn-xs" style="margin-right: 6px;"/>
+                                            <h:commandButton value="✖ Reject" action="#{loanBean.rejectRepayment(rep.id, 'Repayment verification failed')}" styleClass="btn btn-danger btn-xs"/>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <ui:fragment rendered="#{empty loanBean.pendingRepayments}">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 30px 20px; color: var(--text-muted);">
+                                            &#x2714; No pending loan repayments in queue.
+                                        </td>
+                                    </tr>
+                                </ui:fragment>
+                            </tbody>
+                        </table>
+                    </div>
+                </h:form>
+            </div>
+        </h:panelGroup>
+
+        <!-- ===== LOANS TABLE ===== -->
+        <div class="card-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">All Loan Applications</h3>
+                <input type="text" class="form-control table-search-input" data-table="loansTable"
+                       placeholder="Filter by Loan ID or member..." style="max-width: 320px;"/>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+                <div class="table-responsive">
+                    <h:panelGroup id="loansTableGroup" layout="block">
+                        <table class="data-table" id="loansTable">
+                            <thead>
+                                <tr>
+                                    <th>Loan ID</th>
+                                    <th>Membership No.</th>
+                                    <th>Member Name</th>
+                                    <th>Amount</th>
+                                    <th>Interest</th>
+                                    <th>Term</th>
+                                    <th>Remaining</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <ui:repeat value="#{loanBean.loans}" var="l">
+                                    <tr>
+                                        <td><strong>#L-#{l.id}</strong></td>
+                                        <td><code>#{l.membershipNumber}</code></td>
+                                        <td>#{l.memberName}</td>
+                                        <td>UGX <h:outputText value="#{l.principalAmount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+                                        <td>#{l.interestRate}%</td>
+                                        <td>#{l.termInMonths} mo</td>
+                                        <td>
+                                            <span style="font-weight: 600; color: #{l.remainingBalance != null and l.remainingBalance.compareTo(l.principalAmount) lt 0 ? '#16a34a' : '#0369a1'};">
+                                                UGX <h:outputText value="#{l.remainingBalance}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge #{l.status.name() eq 'ACTIVE' ? 'badge-active' : l.status.name() eq 'APPROVED' ? 'badge-active' : l.status.name() eq 'PENDING' ? 'badge-pending' : l.status.name() eq 'COMPLETED' ? 'badge-active' : 'badge-rejected'}">
+                                                #{l.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <h:form style="display: inline-flex; gap: 6px;">
+                                                <h:commandButton value="&#x1F4CB; View Details"
+                                                                 action="#{loanBean.selectLoan(l.id)}"
+                                                                 styleClass="btn btn-outline btn-sm">
+                                                    <f:ajax render=":loanDetailModalContent :feedbackBannersGroup" onevent="handleLoanModalAjax"/>
+                                                </h:commandButton>
+                                            </h:form>
+                                        </td>
+                                    </tr>
+                                </ui:repeat>
+                                <h:panelGroup rendered="#{empty loanBean.loans}">
+                                    <tr>
+                                        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                                            No loan applications found. Click <strong>"+ Apply for Loan"</strong> to submit your first application.
+                                        </td>
+                                    </tr>
+                                </h:panelGroup>
+                            </tbody>
+                        </table>
+                    </h:panelGroup>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== LOAN DETAIL MODAL ===== -->
+        <div class="modal-backdrop" id="loanDetailModal">
+            <div class="modal-card" style="max-width: 780px; width: 95%; max-height: 90vh; overflow-y: auto;">
+
+                <h:panelGroup id="loanDetailModalContent" layout="block">
+
+                    <h:panelGroup rendered="#{loanBean.selectedLoan != null}">
+
+                        <div class="modal-header" style="position: sticky; top: 0; z-index: 10; background: #fff;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px;">Loan Application Details &mdash; #L-#{loanBean.selectedLoan.id}</h3>
+                                <span style="font-size: 12px; color: var(--text-muted);">Member: #{loanBean.selectedLoan.memberName} (#{loanBean.selectedLoan.membershipNumber})</span>
+                            </div>
+                            <button type="button" class="btn-close" onclick="closeLoanModal()">&times;</button>
+                        </div>
+
+                        <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+
+                            <!-- Grid stats -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; background: #f8fafc; padding: 12px; border-radius: 8px;">
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b;">Principal</div>
+                                    <div style="font-weight: 700; color: #1e293b;">UGX <h:outputText value="#{loanBean.selectedLoan.principalAmount}"><f:convertNumber pattern="#,##0.00"/></h:outputText></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b;">Total Interest (5%/mo)</div>
+                                    <div style="font-weight: 700; color: #1e293b;">UGX <h:outputText value="#{loanBean.selectedLoan.totalInterest}"><f:convertNumber pattern="#,##0.00"/></h:outputText></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b;">Total Payable</div>
+                                    <div style="font-weight: 700; color: #0284c7;">UGX <h:outputText value="#{loanBean.selectedLoan.totalAmountPayable}"><f:convertNumber pattern="#,##0.00"/></h:outputText></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 11px; color: #64748b;">Remaining Balance</div>
+                                    <div style="font-weight: 700; color: #16a34a;">UGX <h:outputText value="#{loanBean.selectedLoan.remainingBalance}"><f:convertNumber pattern="#,##0.00"/></h:outputText></div>
+                                </div>
+                            </div>
+
+                            <!-- Purpose & Remarks -->
+                            <div style="font-size: 13px;">
+                                <strong>Purpose:</strong> #{loanBean.selectedLoan.purpose != null ? loanBean.selectedLoan.purpose : 'Not specified'}<br/>
+                                <strong>Remarks:</strong> #{loanBean.selectedLoan.remarks != null ? loanBean.selectedLoan.remarks : 'None'}
+                            </div>
+
+                            <!-- 1. APPROVAL / REJECTION (PENDING loans) -->
+                            <h:panelGroup rendered="#{loanBean.selectedLoan.status.name() eq 'PENDING' and authBean.isStaff()}">
+                                <div style="background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                                    <div style="font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 8px;">&#x26A0;&#xFE0F; Staff Loan Decision Required</div>
+                                    <h:form id="approvalForm">
+                                        <div style="margin-bottom: 12px;">
+                                            <label style="font-size: 12px; font-weight: 600; color: #78350f; display: block; margin-bottom: 4px;">Approval / Rejection Remarks</label>
+                                            <h:inputTextarea value="#{loanBean.approvalRemarks}" styleClass="form-control" rows="2" placeholder="e.g. Approved after collateral verification..."/>
+                                        </div>
+                                        <div style="display: flex; gap: 8px;">
+                                            <h:commandButton value="&#x2714; Approve Loan"
+                                                             action="#{loanBean.approveLoan(loanBean.selectedLoan.id)}"
+                                                             styleClass="btn btn-primary"
+                                                             style="background: #16a34a; border-color: #16a34a;">
+                                                <f:ajax execute="@form" render=":loanDetailModalContent :loansTableGroup :feedbackBannersGroup"/>
+                                            </h:commandButton>
+                                            <h:commandButton value="&#x274C; Reject Loan"
+                                                             action="#{loanBean.rejectLoan(loanBean.selectedLoan.id)}"
+                                                             styleClass="btn btn-outline"
+                                                             style="color: #dc2626; border-color: #dc2626;">
+                                                <f:ajax execute="@form" render=":loanDetailModalContent :loansTableGroup :feedbackBannersGroup"/>
+                                            </h:commandButton>
+                                        </div>
+                                    </h:form>
+                                </div>
+                            </h:panelGroup>
+
+                            <!-- 2. DISBURSEMENT (APPROVED loans) -->
+                            <h:panelGroup rendered="#{loanBean.selectedLoan.status.name() eq 'APPROVED'}">
+                                <h:panelGroup rendered="#{authBean.isStaff()}">
+                                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                                        <div style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 8px;">&#x1F4B8; Disburse Loan Funds</div>
+                                        <h:form id="disburseForm">
+                                            <h:commandButton value="&#x1F680; Disburse Funds &amp; Activate Loan"
+                                                             action="#{loanBean.disburseLoan(loanBean.selectedLoan.id, null)}"
+                                                             styleClass="btn btn-primary"
+                                                             style="background: #16a34a; border-color: #16a34a;">
+                                                <f:ajax execute="@form" render=":loanDetailModalContent :loansTableGroup :feedbackBannersGroup"/>
+                                            </h:commandButton>
+                                        </h:form>
+                                    </div>
+                                </h:panelGroup>
+                                <h:panelGroup rendered="#{not authBean.isStaff()}">
+                                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                                        <div style="font-size: 13px; font-weight: 700; color: #1d4ed8;">&#x2139;&#xFE0F; Awaiting Disbursement</div>
+                                    </div>
+                                </h:panelGroup>
+                            </h:panelGroup>
+
+                            <!-- 3. REPAYMENT (ACTIVE loans) -->
+                            <h:panelGroup rendered="#{loanBean.selectedLoan.status.name() eq 'ACTIVE'}">
+                                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+                                    <div style="font-size: 13px; font-weight: 700; color: #1d4ed8; margin-bottom: 12px;">&#x1F4B3; Record a Loan Repayment</div>
+                                    <h:form id="repaymentForm">
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                                            <div>
+                                                <label style="font-size: 13px; font-weight: 600; color: #1e293b; display: block; margin-bottom: 4px;">Repayment Amount (UGX) *</label>
+                                                <h:inputText value="#{loanBean.repaymentAmount}" styleClass="form-control" placeholder="e.g. 500000" style="font-size: 13px;"/>
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 13px; font-weight: 600; color: #1e293b; display: block; margin-bottom: 4px;">Reference No. (optional)</label>
+                                                <h:inputText value="#{loanBean.repaymentRef}" styleClass="form-control" placeholder="e.g. MTN-20250101" style="font-size: 13px;"/>
+                                            </div>
+                                        </div>
+                                        <h:commandButton value="&#x2714; Record Repayment" action="#{loanBean.makeRepaymentForLoan(loanBean.selectedLoan.id)}" styleClass="btn btn-primary">
+                                            <f:ajax execute="@form" render=":loanDetailModalContent :loansTableGroup :feedbackBannersGroup"/>
+                                        </h:commandButton>
+                                    </h:form>
+                                </div>
+                            </h:panelGroup>
+
+                            <!-- Repayment History -->
+                            <h:panelGroup rendered="#{not empty loanBean.selectedLoan.recentRepayments}">
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+                                    <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 12px;">&#x1F4D1; Repayment History</div>
+                                    <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="background: #e2e8f0;">
+                                                <th style="padding: 8px 10px; text-align: left; font-weight: 700;">Date</th>
+                                                <th style="padding: 8px 10px; text-align: left; font-weight: 700;">Amount Paid</th>
+                                                <th style="padding: 8px 10px; text-align: left; font-weight: 700;">Reference</th>
+                                                <th style="padding: 8px 10px; text-align: left; font-weight: 700;">Approval Status</th>
+                                                <th style="padding: 8px 10px; text-align: left; font-weight: 700;">Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <ui:repeat value="#{loanBean.selectedLoan.recentRepayments}" var="r">
+                                                <tr style="border-top: 1px solid #e2e8f0;">
+                                                    <td style="padding: 8px 10px;">#{r.formattedPaymentDate}</td>
+                                                    <td style="padding: 8px 10px; font-weight: 700; color: #16a34a;">UGX <h:outputText value="#{r.amountPaid}"><f:convertNumber pattern="#,##0.00"/></h:outputText></td>
+                                                    <td style="padding: 8px 10px;"><code>#{r.referenceNumber}</code></td>
+                                                    <td style="padding: 8px 10px;">
+                                                        <span class="badge #{r.approvalStatus == 'PENDING' ? 'badge-pending' : (r.approvalStatus == 'REJECTED' ? 'badge-rejected' : 'badge-active')}">
+                                                            #{r.approvalStatus == 'PENDING' ? '⏳ PENDING' : (r.approvalStatus == 'REJECTED' ? '✖ REJECTED' : '✔ APPROVED')}
+                                                        </span>
+                                                    </td>
+                                                    <td style="padding: 8px 10px; color: #64748b;">#{r.remarks != null ? r.remarks : '—'}</td>
+                                                </tr>
+                                            </ui:repeat>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </h:panelGroup>
+
+                        </div><!-- /modal-body -->
+
+                    </h:panelGroup>
+
+                    <!-- Fallback when no loan is selected -->
+                    <h:panelGroup rendered="#{loanBean.selectedLoan == null}">
+                        <div class="modal-body" style="text-align: center; padding: 48px;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">&#x1F4CB;</div>
+                            <p style="color: var(--text-muted);">No loan selected. Click "View Details" on a loan row.</p>
+                            <button type="button" class="btn btn-outline" onclick="closeLoanModal()" style="margin-top: 12px;">Close</button>
+                        </div>
+                    </h:panelGroup>
+
+                </h:panelGroup>
+
+            </div>
+        </div>
+
+        <script>
+            // Toggle loan application form
+            function toggleLoanForm() {
+                var sec = document.getElementById('loanApplicationSection');
+                if (sec.style.display === 'none' || sec.style.display === '') {
+                    sec.style.display = 'block';
+                    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    sec.style.display = 'none';
+                }
+            }
+
+            // AJAX event listener for View Details button
+            function handleLoanModalAjax(data) {
+                if (data.status === 'success') {
+                    var modal = document.getElementById('loanDetailModal');
+                    if (modal) {
+                        modal.classList.add('show');
+                    }
+                }
+            }
+
+            function closeLoanModal() {
+                var modal = document.getElementById('loanDetailModal');
+                if (modal) modal.classList.remove('show');
+            }
+
+            // Close on backdrop click
+            document.addEventListener('DOMContentLoaded', function() {
+                var modal = document.getElementById('loanDetailModal');
+                if (modal) {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) closeLoanModal();
+                    });
+                }
+            });
+
+            // Loan type visual selection
+            var selectedLoanType = 'PERSONAL';
+            function selectLoanType(type) {
+                selectedLoanType = type;
+                document.querySelectorAll('.loan-type-card').forEach(function(c) { c.classList.remove('selected'); });
+                var card = document.getElementById('ltype-' + type.toLowerCase());
+                if (card) card.classList.add('selected');
+            }
+            selectLoanType('PERSONAL');
+
+            // Payment mode selection
+            var selectedPaymentMode = 'MPESA';
+            function selectPaymentMode(mode, el) {
+                selectedPaymentMode = mode;
+                document.querySelectorAll('.payment-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+                el.classList.add('active');
+            }
+
+            // Purpose shortcut pills
+            function appendPurpose(text) {
+                var ta = document.querySelector('textarea[id$="purpose"]') || document.querySelector('textarea');
+                if (ta) { ta.value = ta.value ? ta.value + ', ' + text : text; ta.focus(); }
+            }
+
+            // Sync hidden inputs before submit
+            function syncHiddenFields() {
+                var lth = document.querySelector('input[id$="loanTypeHidden"]');
+                var pmh = document.querySelector('input[id$="paymentModeHidden"]');
+                if (lth) lth.value = selectedLoanType;
+                if (pmh) pmh.value = selectedPaymentMode;
+            }
+        </script>
+
+    </ui:define>
+</ui:composition>

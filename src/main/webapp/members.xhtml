@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Member Management</ui:define>
+
+    <ui:define name="content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">SACCO Member Directory</h1>
+                <p class="page-description">Register, search, update, and manage Kimwanyi SACCO member profiles.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openModal('registerMemberModal')">+ Register New Member</button>
+        </div>
+
+        <!-- Alert Banners -->
+        <h:panelGroup rendered="#{not empty memberBean.message}">
+            <div style="padding: 14px 20px; background: var(--success-100); color: var(--success-600); border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;">
+                #{memberBean.message}
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty memberBean.errorMessage}">
+            <div style="padding: 14px 20px; background: var(--danger-100); color: var(--danger-600); border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;">
+                #{memberBean.errorMessage}
+            </div>
+        </h:panelGroup>
+
+        <!-- Search & Member Table Panel -->
+        <div class="card-panel">
+            <div class="panel-header">
+                <input type="text" class="form-control table-search-input" data-table="membersTable" 
+                       placeholder="Filter members by name, member # or national ID..." style="max-width: 360px;"/>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+                <div class="table-responsive">
+                    <table class="data-table" id="membersTable">
+                        <thead>
+                            <tr>
+                                <th>Membership #</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>National ID</th>
+                                <th>Phone Number</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ui:repeat value="#{memberBean.members}" var="m">
+                                <tr>
+                                    <td><strong>#{m.membershipNumber}</strong></td>
+                                    <td>#{m.firstName}</td>
+                                    <td>#{m.lastName}</td>
+                                    <td>#{m.nationalId}</td>
+                                    <td>#{m.phoneNumber}</td>
+                                    <td>#{m.email}</td>
+                                    <td>
+                                        <span class="badge #{m.status eq 'ACTIVE' ? 'badge-active' : 'badge-inactive'}">
+                                            #{m.status}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <h:form style="display: inline;">
+                                            <h:commandButton value="Deactivate" action="#{memberBean.deactivateMember(m.id)}" 
+                                                             styleClass="btn btn-outline btn-sm"
+                                                             onclick="return confirm('Deactivate this member account?');"/>
+                                        </h:form>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+                            <h:panelGroup rendered="#{empty memberBean.members}">
+                                <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">No member records found.</td></tr>
+                            </h:panelGroup>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Member Modal -->
+        <div id="registerMemberModal" class="modal-backdrop">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 style="font-size: 18px;">Register New SACCO Member</h3>
+                    <button type="button" class="modal-close" onclick="closeModal('registerMemberModal')">✕</button>
+                </div>
+                <h:form>
+                    <div class="modal-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">First Name *</label>
+                                <h:inputText value="#{memberBean.newMember.firstName}" styleClass="form-control" required="true"/>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Last Name *</label>
+                                <h:inputText value="#{memberBean.newMember.lastName}" styleClass="form-control" required="true"/>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">National ID / NIN *</label>
+                                <h:inputText value="#{memberBean.newMember.nationalId}" styleClass="form-control" required="true"/>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <h:inputText value="#{memberBean.newMember.phoneNumber}" styleClass="form-control" placeholder="+256 700 000 000"/>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email Address</label>
+                                <h:inputText value="#{memberBean.newMember.email}" styleClass="form-control" placeholder="member@example.com"/>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Physical Address</label>
+                                <h:inputText value="#{memberBean.newMember.address}" styleClass="form-control" placeholder="Kampala, Uganda"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('registerMemberModal')">Cancel</button>
+                        <h:commandButton value="Register Member" action="#{memberBean.registerMember}" styleClass="btn btn-primary"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+    </ui:define>
+</ui:composition>

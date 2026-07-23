@@ -10,4 +10,5 @@ public class LoanPaymentRequest {
     private BigDecimal amount;
     private String referenceNumber;
     private String remarks;
+    private boolean requiresApproval = false;
 }

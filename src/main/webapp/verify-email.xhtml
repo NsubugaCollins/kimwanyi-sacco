@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Email Verification - Kimwanyi SACCO</title>
+    <link rel="stylesheet" href="#{request.contextPath}/resources/css/style.css"/>
+</h:head>
+
+<f:metadata>
+    <f:viewParam name="token" value="#{verifyEmailBean.token}"/>
+    <f:viewAction action="#{verifyEmailBean.verifyToken}"/>
+</f:metadata>
+
+<h:body style="background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+
+    <div style="width: 100%; max-width: 480px; background: #ffffff; border-radius: var(--radius-lg); padding: 36px; box-shadow: var(--shadow-xl); text-align: center;">
+
+        <div style="margin-bottom: 24px;">
+            <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="auth-brand-logo-img"/>
+            <h2 style="font-size: 22px; margin-top: 12px; margin-bottom: 4px;">Account Verification</h2>
+        </div>
+
+        <!-- Success View -->
+        <h:panelGroup rendered="#{verifyEmailBean.verified}">
+            <div style="padding: 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+                <h3 style="color: #166534; font-size: 18px; margin-bottom: 8px;">Email Verified Successfully!</h3>
+                <p style="color: #15803d; font-size: 14px; margin: 0;">#{verifyEmailBean.message}</p>
+            </div>
+
+            <h:outputLink value="#{request.contextPath}/login.xhtml" styleClass="btn btn-primary" style="display: block; padding: 13px; font-size: 15px; text-decoration: none;">
+                Proceed to Sign In ➔
+            </h:outputLink>
+        </h:panelGroup>
+
+        <!-- Failure / Error View -->
+        <h:panelGroup rendered="#{not verifyEmailBean.verified}">
+            <div style="padding: 24px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
+                <h3 style="color: #991b1b; font-size: 18px; margin-bottom: 8px;">Verification Failed</h3>
+                <p style="color: #b91c1c; font-size: 14px; margin: 0;">#{verifyEmailBean.errorMessage}</p>
+            </div>
+
+            <!-- Resend Verification Form -->
+            <h:form id="resendForm" style="text-align: left; margin-top: 20px;">
+                <h4 style="font-size: 14px; margin-bottom: 8px; color: #333333;">Resend Verification Link</h4>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label">Registered Email or Membership Number</label>
+                    <h:inputText value="#{verifyEmailBean.resendIdentifier}" styleClass="form-control" placeholder="name@example.com" required="true"/>
+                </div>
+                <h:commandButton value="Resend Verification Email" action="#{verifyEmailBean.resendVerificationEmail}"
+                                 styleClass="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px;"/>
+            </h:form>
+
+            <div style="margin-top: 20px; font-size: 14px;">
+                <h:outputLink value="#{request.contextPath}/login.xhtml" style="color: var(--primary-600); text-decoration: none; font-weight: 600;">
+                    ← Back to Sign In
+                </h:outputLink>
+            </div>
+        </h:panelGroup>
+
+    </div>
+
+</h:body>
+</html>

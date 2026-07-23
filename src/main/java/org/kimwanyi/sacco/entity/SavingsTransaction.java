@@ -3,9 +3,11 @@ package org.kimwanyi.sacco.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.kimwanyi.sacco.enums.ApprovalStatus;
 import org.kimwanyi.sacco.enums.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -49,15 +51,33 @@ public class SavingsTransaction extends BaseEntity {
     @Column(name = "channel", length = 20)
     private String channel;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", nullable = false, length = 20)
+    private ApprovalStatus approvalStatus = ApprovalStatus.APPROVED;
+
+    @Column(name = "approved_by_user_id")
+    private Long approvedByUserId;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+
     public SavingsTransaction() {
     }
 
     public SavingsTransaction(SavingsAccount savingsAccount, TransactionType type, BigDecimal amount, String description, String referenceNumber) {
+        this(savingsAccount, type, amount, description, referenceNumber, ApprovalStatus.APPROVED);
+    }
+
+    public SavingsTransaction(SavingsAccount savingsAccount, TransactionType type, BigDecimal amount, String description, String referenceNumber, ApprovalStatus approvalStatus) {
         this.savingsAccount = savingsAccount;
         this.type = type;
         this.amount = amount;
         this.description = description;
         this.referenceNumber = referenceNumber;
+        this.approvalStatus = approvalStatus != null ? approvalStatus : ApprovalStatus.APPROVED;
     }
 
     public SavingsAccount getSavingsAccount() {
@@ -146,5 +166,37 @@ public class SavingsTransaction extends BaseEntity {
 
     public void setChannel(String channel) {
         this.channel = channel;
+    }
+
+    public ApprovalStatus getApprovalStatus() {
+        return approvalStatus;
+    }
+
+    public void setApprovalStatus(ApprovalStatus approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
+    public Long getApprovedByUserId() {
+        return approvedByUserId;
+    }
+
+    public void setApprovedByUserId(Long approvedByUserId) {
+        this.approvedByUserId = approvedByUserId;
+    }
+
+    public LocalDateTime getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void setApprovedAt(LocalDateTime approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

@@ -1,6 +1,7 @@
 package org.kimwanyi.sacco.dto.loan;
 
 import lombok.Data;
+import org.kimwanyi.sacco.enums.ApprovalStatus;
 import org.kimwanyi.sacco.enums.LoanStatus;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.util.List;
 public class LoanResponse {
     private Long id;
     private Long memberId;
+    private String membershipNumber;
     private String memberName;
     private BigDecimal principalAmount;
     private BigDecimal interestRate;
@@ -26,6 +28,16 @@ public class LoanResponse {
     private String remarks;
     private List<RepaymentDto> recentRepayments;
 
+    public String getFormattedApprovedAt() {
+        if (approvedAt == null) return "—";
+        return approvedAt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    public String getFormattedDisbursedAt() {
+        if (disbursedAt == null) return "—";
+        return disbursedAt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
     @Data
     public static class RepaymentDto {
         private Long id;
@@ -33,5 +45,12 @@ public class LoanResponse {
         private LocalDateTime paymentDate;
         private String referenceNumber;
         private String remarks;
+        private ApprovalStatus approvalStatus = ApprovalStatus.APPROVED;
+        private String rejectionReason;
+
+        public String getFormattedPaymentDate() {
+            if (paymentDate == null) return "—";
+            return paymentDate.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
     }
 }

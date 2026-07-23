@@ -10,4 +10,11 @@ public class LoanApplicationRequest {
     private BigDecimal principalAmount;
     private Integer termInMonths;
     private String purpose;
+
+    // Extended fields for the rich application form
+    private String loanType    = "PERSONAL";   // PERSONAL, BUSINESS, EMERGENCY, AGRICULTURE
+    private String paymentMode = "MPESA";       // MPESA, MTN, AIRTEL, BANK_TRANSFER, CASH
+    private String accountNumber;
+    private String phoneNumber;
 }
+

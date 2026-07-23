@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Login - Kimwanyi SACCO Portal</title>
+    <link rel="stylesheet" href="#{request.contextPath}/resources/css/style.css"/>
+</h:head>
+
+<h:body style="background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    
+    <div style="width: 100%; max-width: 440px; background: #ffffff; border-radius: var(--radius-lg); padding: 36px; box-shadow: var(--shadow-xl);">
+        
+        <div style="text-align: center; margin-bottom: 28px;">
+            <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="auth-brand-logo-img"/>
+            <h2 style="font-size: 22px; margin-bottom: 4px;">Kimwanyi SACCO Portal</h2>
+            <p style="font-size: 13px; color: var(--text-muted);">Sign in to access your SACCO financial dashboard</p>
+        </div>
+
+        <h:panelGroup rendered="#{not empty authBean.message}">
+            <div style="padding: 14px 16px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; margin-bottom: 20px; line-height: 1.5;">
+                #{authBean.message}
+            </div>
+        </h:panelGroup>
+
+        <h:messages globalOnly="false" layout="list"
+                    style="padding: 14px 16px; background: var(--danger-100); color: var(--danger-600); border-radius: var(--radius-md); font-size: 13px; font-weight: 600; margin-bottom: 20px; line-height: 1.5; list-style: none;"/>
+
+        <h:panelGroup rendered="#{not empty authBean.errorMessage}">
+            <div style="padding: 14px 16px; background: var(--danger-100); color: var(--danger-600); border-radius: var(--radius-md); font-size: 13px; font-weight: 600; margin-bottom: 20px; line-height: 1.5;">
+                #{authBean.errorMessage}
+                <h:panelGroup rendered="#{authBean.errorMessage.contains('not been verified')}">
+                    <div style="margin-top: 8px;">
+                        <h:outputLink value="#{request.contextPath}/verify-email.xhtml" style="color: #991b1b; text-decoration: underline; font-weight: 700;">
+                            Click here to resend verification email
+                        </h:outputLink>
+                    </div>
+                </h:panelGroup>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="loginForm">
+            <div class="form-group" style="margin-bottom: 18px;">
+                <label class="form-label">Username</label>
+                <h:inputText value="#{authBean.username}" styleClass="form-control" placeholder="Username" required="true" requiredMessage="Username (or Membership No / Email) is required!"/>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label class="form-label">Password</label>
+                <h:inputSecret value="#{authBean.password}" styleClass="form-control" placeholder="••••••••" required="true" requiredMessage="Password is required!"/>
+            </div>
+
+            <h:commandButton value="Sign In to Portal" action="#{authBean.login}" styleClass="btn btn-primary" style="width: 100%; padding: 13px; font-size: 15px;"/>
+        </h:form>
+
+        <div style="margin-top: 24px; text-align: center; font-size: 14px; color: var(--text-muted);">
+            Don't have an account? 
+            <h:outputLink value="#{request.contextPath}/register.xhtml" style="color: var(--primary-600); font-weight: 600; text-decoration: none;">Register As</h:outputLink>
+        </div>
+    </div>
+
+</h:body>
+</html>

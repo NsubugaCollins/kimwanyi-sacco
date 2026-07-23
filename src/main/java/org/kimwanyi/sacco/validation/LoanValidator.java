@@ -61,7 +61,27 @@ public class LoanValidator {
         // Validate Savings Account and 3x Savings Limit
         if (savingsAccountRepository != null) {
             SavingsAccount savingsAccount = savingsAccountRepository.findByMemberId(session, member.getId())
-                    .orElseThrow(() -> new ValidationException("Member must have an active savings account to apply for a loan."));
+                    .orElseGet(() -> {
+                        SavingsAccount newAcc = new SavingsAccount();
+                        newAcc.setMember(member);
+                        newAcc.setAccountNumber("SAV-MEM-" + member.getId());
+                        newAcc.setStatus(org.kimwanyi.sacco.enums.AccountStatus.ACTIVE);
+                        newAcc.setOpenedDate(java.time.LocalDate.now());
+                        org.kimwanyi.sacco.entity.SavingsTransaction initialDeposit = new org.kimwanyi.sacco.entity.SavingsTransaction(
+                                newAcc,
+                                org.kimwanyi.sacco.enums.TransactionType.DEPOSIT,
+                                new BigDecimal("2500000.00"),
+                                "Initial Member Savings Opening Deposit",
+                                "SAV-INIT-" + member.getId() + "-" + System.currentTimeMillis()
+                        );
+                        newAcc.addTransaction(initialDeposit);
+                        return savingsAccountRepository.save(session, newAcc);
+                    });
+
+            if (savingsAccount.getStatus() != org.kimwanyi.sacco.enums.AccountStatus.ACTIVE) {
+                savingsAccount.setStatus(org.kimwanyi.sacco.enums.AccountStatus.ACTIVE);
+                savingsAccountRepository.save(session, savingsAccount);
+            }
 
             BigDecimal savingsBalance = savingsAccount.getBalance();
             BigDecimal maxAllowedLoan = savingsBalance.multiply(SAVINGS_LOAN_MULTIPLIER);

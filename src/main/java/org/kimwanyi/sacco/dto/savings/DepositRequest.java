@@ -11,4 +11,5 @@ public class DepositRequest {
     private BigDecimal amount;
     private String description;
     private String referenceNumber;
+    private boolean requiresApproval = false;
 }

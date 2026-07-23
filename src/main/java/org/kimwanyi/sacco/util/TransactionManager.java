@@ -23,6 +23,10 @@ public class TransactionManager {
                 transaction = session.beginTransaction();
             }
 
+            if (session == null) {
+                return callback.execute(null);
+            }
+
             T result = callback.execute(session);
 
             if (transaction != null && transaction.isActive()) {

@@ -1,6 +1,7 @@
 package org.kimwanyi.sacco.serviceImpl;
 
 import org.hibernate.Session;
+import org.kimwanyi.sacco.dto.notification.SendNotificationRequest;
 import org.kimwanyi.sacco.dto.savings.DepositRequest;
 import org.kimwanyi.sacco.dto.savings.SavingsResponse;
 import org.kimwanyi.sacco.dto.savings.WithdrawalRequest;
@@ -8,16 +9,21 @@ import org.kimwanyi.sacco.entity.Member;
 import org.kimwanyi.sacco.entity.SavingsAccount;
 import org.kimwanyi.sacco.entity.SavingsTransaction;
 import org.kimwanyi.sacco.enums.AccountStatus;
+import org.kimwanyi.sacco.enums.ApprovalStatus;
+import org.kimwanyi.sacco.enums.NotificationChannel;
+import org.kimwanyi.sacco.enums.NotificationType;
 import org.kimwanyi.sacco.enums.TransactionType;
 import org.kimwanyi.sacco.exception.ValidationException;
 import org.kimwanyi.sacco.repository.MemberRepository;
 import org.kimwanyi.sacco.repository.SavingsAccountRepository;
 import org.kimwanyi.sacco.repository.SavingsTransactionRepository;
+import org.kimwanyi.sacco.service.NotificationService;
 import org.kimwanyi.sacco.service.SavingsService;
 import org.kimwanyi.sacco.util.TransactionManager;
 import org.kimwanyi.sacco.validation.SavingsValidator;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +33,7 @@ public class SavingsServiceImpl implements SavingsService {
     private final SavingsTransactionRepository savingsTransactionRepository;
     private final MemberRepository memberRepository;
     private final SavingsValidator savingsValidator;
+    private final NotificationService notificationService;
 
     public SavingsServiceImpl(
             SavingsAccountRepository savingsAccountRepository,
@@ -34,10 +41,21 @@ public class SavingsServiceImpl implements SavingsService {
             MemberRepository memberRepository,
             SavingsValidator savingsValidator
     ) {
+        this(savingsAccountRepository, savingsTransactionRepository, memberRepository, savingsValidator, null);
+    }
+
+    public SavingsServiceImpl(
+            SavingsAccountRepository savingsAccountRepository,
+            SavingsTransactionRepository savingsTransactionRepository,
+            MemberRepository memberRepository,
+            SavingsValidator savingsValidator,
+            NotificationService notificationService
+    ) {
         this.savingsAccountRepository = savingsAccountRepository;
         this.savingsTransactionRepository = savingsTransactionRepository;
         this.memberRepository = memberRepository;
         this.savingsValidator = savingsValidator;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -75,18 +93,133 @@ public class SavingsServiceImpl implements SavingsService {
             SavingsAccount account = findAccountByRequest(session, request.getAccountId(), request.getAccountNumber());
             savingsValidator.validateAccountActive(account);
 
+            ApprovalStatus status = request.isRequiresApproval() ? ApprovalStatus.PENDING : ApprovalStatus.APPROVED;
+
             SavingsTransaction transaction = new SavingsTransaction(
                     account,
                     TransactionType.DEPOSIT,
                     request.getAmount(),
                     request.getDescription(),
-                    request.getReferenceNumber()
+                    request.getReferenceNumber(),
+                    status
             );
 
             account.addTransaction(transaction);
             savingsTransactionRepository.save(session, transaction);
 
+            if (notificationService != null && status == ApprovalStatus.PENDING) {
+                try {
+                    SendNotificationRequest notifReq = new SendNotificationRequest();
+                    notifReq.setUserId(100L);
+                    notifReq.setTitle("Pending Deposit Approval Request");
+                    notifReq.setMessage(String.format("New deposit of UGX %s for Account %s requires cashier approval. Ref: %s",
+                            request.getAmount().toPlainString(), account.getAccountNumber(), request.getReferenceNumber()));
+                    notifReq.setType(NotificationType.SAVINGS_DEPOSIT);
+                    notifReq.setChannel(NotificationChannel.SYSTEM);
+                    notificationService.sendNotification(notifReq);
+                } catch (Exception ignored) {}
+            }
+
             return toResponse(account);
+        });
+    }
+
+    @Override
+    public SavingsResponse approveDeposit(Long transactionId, Long cashierUserId) {
+        if (transactionId == null) {
+            throw new ValidationException("Transaction ID is required for approval.");
+        }
+        return TransactionManager.execute(session -> {
+            SavingsTransaction transaction = savingsTransactionRepository.findById(session, transactionId)
+                    .orElseThrow(() -> new ValidationException("Transaction not found with ID: " + transactionId));
+
+            if (transaction.getApprovalStatus() != ApprovalStatus.PENDING) {
+                throw new ValidationException("Transaction is not pending approval.");
+            }
+
+            transaction.setApprovalStatus(ApprovalStatus.APPROVED);
+            transaction.setApprovedByUserId(cashierUserId);
+            transaction.setApprovedAt(LocalDateTime.now());
+
+            savingsTransactionRepository.update(session, transaction);
+            SavingsAccount account = transaction.getSavingsAccount();
+
+            if (notificationService != null && account.getMember() != null) {
+                try {
+                    SendNotificationRequest notifReq = new SendNotificationRequest();
+                    notifReq.setMemberId(account.getMember().getId());
+                    notifReq.setTitle("Deposit Approved");
+                    notifReq.setMessage(String.format("Your deposit of UGX %s (Ref: %s) has been approved by the cashier.",
+                            transaction.getAmount().toPlainString(), transaction.getReferenceNumber()));
+                    notifReq.setType(NotificationType.SAVINGS_DEPOSIT);
+                    notifReq.setChannel(NotificationChannel.BOTH);
+                    notificationService.sendNotification(notifReq);
+                } catch (Exception ignored) {}
+            }
+
+            return toResponse(account);
+        });
+    }
+
+    @Override
+    public SavingsResponse rejectDeposit(Long transactionId, Long cashierUserId, String reason) {
+        if (transactionId == null) {
+            throw new ValidationException("Transaction ID is required for rejection.");
+        }
+        return TransactionManager.execute(session -> {
+            SavingsTransaction transaction = savingsTransactionRepository.findById(session, transactionId)
+                    .orElseThrow(() -> new ValidationException("Transaction not found with ID: " + transactionId));
+
+            if (transaction.getApprovalStatus() != ApprovalStatus.PENDING) {
+                throw new ValidationException("Transaction is not pending approval.");
+            }
+
+            transaction.setApprovalStatus(ApprovalStatus.REJECTED);
+            transaction.setApprovedByUserId(cashierUserId);
+            transaction.setApprovedAt(LocalDateTime.now());
+            transaction.setRejectionReason(reason != null ? reason.trim() : "Rejected by cashier");
+
+            savingsTransactionRepository.update(session, transaction);
+            SavingsAccount account = transaction.getSavingsAccount();
+
+            if (notificationService != null && account.getMember() != null) {
+                try {
+                    SendNotificationRequest notifReq = new SendNotificationRequest();
+                    notifReq.setMemberId(account.getMember().getId());
+                    notifReq.setTitle("Deposit Rejected");
+                    notifReq.setMessage(String.format("Your deposit of UGX %s (Ref: %s) was rejected. Reason: %s",
+                            transaction.getAmount().toPlainString(), transaction.getReferenceNumber(), transaction.getRejectionReason()));
+                    notifReq.setType(NotificationType.SAVINGS_DEPOSIT);
+                    notifReq.setChannel(NotificationChannel.BOTH);
+                    notificationService.sendNotification(notifReq);
+                } catch (Exception ignored) {}
+            }
+
+            return toResponse(account);
+        });
+    }
+
+    @Override
+    public List<SavingsResponse.TransactionDto> getPendingDeposits() {
+        return TransactionManager.execute(session -> {
+            List<SavingsTransaction> txs = session.createQuery(
+                    "FROM SavingsTransaction st JOIN FETCH st.savingsAccount sa JOIN FETCH sa.member WHERE st.approvalStatus = :status ORDER BY st.createdAt DESC",
+                    SavingsTransaction.class)
+                    .setParameter("status", ApprovalStatus.PENDING)
+                    .getResultList();
+
+            return txs.stream().map(tx -> {
+                SavingsResponse.TransactionDto dto = new SavingsResponse.TransactionDto();
+                dto.setId(tx.getId());
+                dto.setType(tx.getType());
+                dto.setAmount(tx.getAmount());
+                dto.setDescription(tx.getDescription());
+                dto.setReferenceNumber(tx.getReferenceNumber());
+                dto.setApprovalStatus(tx.getApprovalStatus());
+                dto.setRejectionReason(tx.getRejectionReason());
+                dto.setCreatedAt(tx.getCreatedAt());
+                return dto;
+            }).collect(Collectors.toList());
         });
     }
 
@@ -106,7 +239,8 @@ public class SavingsServiceImpl implements SavingsService {
                     TransactionType.WITHDRAW,
                     request.getAmount(),
                     request.getDescription(),
-                    request.getReferenceNumber()
+                    request.getReferenceNumber(),
+                    ApprovalStatus.APPROVED
             );
 
             account.addTransaction(transaction);
@@ -178,6 +312,8 @@ public class SavingsServiceImpl implements SavingsService {
                 dto.setAmount(tx.getAmount());
                 dto.setDescription(tx.getDescription());
                 dto.setReferenceNumber(tx.getReferenceNumber());
+                dto.setApprovalStatus(tx.getApprovalStatus() != null ? tx.getApprovalStatus() : ApprovalStatus.APPROVED);
+                dto.setRejectionReason(tx.getRejectionReason());
                 dto.setCreatedAt(tx.getCreatedAt());
                 return dto;
             }).collect(Collectors.toList());

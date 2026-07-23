@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">General Ledger Accounting</ui:define>
+
+    <ui:define name="content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Chart of Accounts &amp; General Ledger</h1>
+                <p class="page-description">Automated double-entry bookkeeping, trial balance, and general ledger chart for Kimwanyi SACCO.</p>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="openModal('createLedgerAccountModal')">+ Create GL Account</button>
+        </div>
+
+        <!-- Alert Banner -->
+        <h:panelGroup rendered="#{not empty ledgerBean.message}">
+            <div style="padding: 14px 20px; background: var(--success-100); color: var(--success-600); border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;">
+                #{ledgerBean.message}
+            </div>
+        </h:panelGroup>
+        <h:panelGroup rendered="#{not empty ledgerBean.errorMessage}">
+            <div style="padding: 14px 20px; background: var(--danger-100); color: var(--danger-600); border-radius: var(--radius-md); font-weight: 600; margin-bottom: 20px;">
+                #{ledgerBean.errorMessage}
+            </div>
+        </h:panelGroup>
+
+        <!-- Chart of Accounts Panel -->
+        <div class="card-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">Chart of Accounts</h3>
+                <input type="text" class="form-control table-search-input" data-table="ledgerTable" 
+                       placeholder="Search account code or name..." style="max-width: 320px;"/>
+            </div>
+            <div class="panel-body" style="padding: 0;">
+                <div class="table-responsive">
+                    <table class="data-table" id="ledgerTable">
+                        <thead>
+                            <tr>
+                                <th>Account Code</th>
+                                <th>Account Name</th>
+                                <th>Account Type</th>
+                                <th>Current Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ui:repeat value="#{ledgerBean.accounts}" var="a">
+                                <tr>
+                                    <td><strong>#{a.accountCode}</strong></td>
+                                    <td>#{a.name}</td>
+                                    <td><span class="badge badge-active">#{a.type}</span></td>
+                                    <td style="font-weight: 700; color: var(--primary-700);">UGX #{a.currentBalance}</td>
+                                </tr>
+                            </ui:repeat>
+                            <h:panelGroup rendered="#{empty ledgerBean.accounts}">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No GL accounts found. Accounts will auto-initialize upon first transaction.</td></tr>
+                            </h:panelGroup>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Account Modal -->
+        <div id="createLedgerAccountModal" class="modal-backdrop">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 style="font-size: 18px;">Create New GL Account</h3>
+                    <button type="button" class="modal-close" onclick="closeModal('createLedgerAccountModal')">✕</button>
+                </div>
+                <h:form>
+                    <div class="modal-body">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">Account Code *</label>
+                            <h:inputText value="#{ledgerBean.newAccountCode}" styleClass="form-control" required="true" placeholder="e.g. 1050-BANK"/>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">Account Name *</label>
+                            <h:inputText value="#{ledgerBean.newAccountName}" styleClass="form-control" required="true" placeholder="e.g. Bank Operating Account"/>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('createLedgerAccountModal')">Cancel</button>
+                        <h:commandButton value="Create Account" action="#{ledgerBean.createAccount}" styleClass="btn btn-primary"/>
+                    </div>
+                </h:form>
+            </div>
+        </div>
+    </ui:define>
+</ui:composition>
