@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+
+<ui:composition template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Statistics &amp; Analytics</ui:define>
+
+    <ui:define name="content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">&#x1F4CA; Statistics &amp; Analytics</h1>
+                <p class="page-description">Live financial intelligence — loans, savings, deposits and withdrawal performance across the SACCO portfolio.</p>
+            </div>
+        </div>
+
+        <style>
+            /* Stats page layout */
+            .stats-kpi-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 18px;
+                margin-bottom: 28px;
+            }
+            .kpi-card {
+                background: #ffffff;
+                border-radius: 16px;
+                padding: 22px 24px;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+                border-left: 5px solid var(--primary-500, #2563eb);
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                transition: transform 0.18s, box-shadow 0.18s;
+            }
+            .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,0.12); }
+            .kpi-card.green  { border-left-color: #16a34a; }
+            .kpi-card.teal   { border-left-color: #0d9488; }
+            .kpi-card.orange { border-left-color: #ea580c; }
+            .kpi-card.purple { border-left-color: #7c3aed; }
+            .kpi-card.red    { border-left-color: #dc2626; }
+            .kpi-card.sky    { border-left-color: #0284c7; }
+            .kpi-card.indigo { border-left-color: #4338ca; }
+            .kpi-icon { font-size: 26px; margin-bottom: 4px; }
+            .kpi-label { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: #94a3b8; }
+            .kpi-value { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+            .kpi-sub   { font-size: 12px; color: #64748b; margin-top: 2px; }
+            .kpi-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+            .badge-green  { background: #dcfce7; color: #15803d; }
+            .badge-red    { background: #fee2e2; color: #dc2626; }
+            .badge-orange { background: #ffedd5; color: #c2410c; }
+
+            /* Chart grid */
+            .charts-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+                gap: 22px;
+                margin-bottom: 28px;
+            }
+            .chart-card {
+                background: #ffffff;
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            }
+            .chart-card.wide { grid-column: 1 / -1; }
+            .chart-title {
+                font-size: 14px;
+                font-weight: 700;
+                color: #0f172a;
+                margin: 0 0 18px 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .chart-title .ct-icon { font-size: 18px; }
+            .chart-subtitle { font-size: 11px; color: #94a3b8; font-weight: 400; margin-left: auto; }
+            .chart-wrap { position: relative; height: 260px; }
+            .chart-wrap.tall { height: 320px; }
+
+            /* Rate bars */
+            .rate-bar-list { display: flex; flex-direction: column; gap: 14px; }
+            .rate-bar-item { display: flex; flex-direction: column; gap: 4px; }
+            .rate-bar-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #334155; }
+            .rate-bar-track { height: 10px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+            .rate-bar-fill  { height: 100%; border-radius: 99px; transition: width 1s ease; }
+            .fill-green  { background: linear-gradient(90deg, #22c55e, #16a34a); }
+            .fill-red    { background: linear-gradient(90deg, #f87171, #dc2626); }
+            .fill-blue   { background: linear-gradient(90deg, #60a5fa, #2563eb); }
+            .fill-orange { background: linear-gradient(90deg, #fb923c, #ea580c); }
+
+            /* Summary table */
+            .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            .stats-table th { background: #f1f5f9; color: #475569; font-weight: 700; padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+            .stats-table td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+            .stats-table tr:last-child td { border-bottom: none; }
+            .stats-table tr:hover td { background: #f8fafc; }
+            .pct-pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+            /* Section divider */
+            .section-divider { display: flex; align-items: center; gap: 12px; margin: 28px 0 18px; }
+            .section-divider h2 { font-size: 14px; font-weight: 700; color: #334155; white-space: nowrap; margin: 0; }
+            .section-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+        </style>
+
+        <!-- ═══════════════════════════════════════════════
+             KPI CARDS — Row 1: Members + Savings
+        ═══════════════════════════════════════════════ -->
+        <div class="stats-kpi-grid">
+            <div class="kpi-card green">
+                <div class="kpi-icon">&#x1F465;</div>
+                <div class="kpi-label">Total Members</div>
+                <div class="kpi-value">#{statisticsBean.totalMembers}</div>
+                <div class="kpi-sub">
+                    <span class="kpi-badge badge-green">#{statisticsBean.activeMembers} Active</span>
+                    &#x00A0;
+                    <span class="kpi-badge badge-orange">#{statisticsBean.pendingMembers} Pending</span>
+                </div>
+            </div>
+
+            <div class="kpi-card teal">
+                <div class="kpi-icon">&#x1F4B0;</div>
+                <div class="kpi-label">Total Savings Balance</div>
+                <div class="kpi-value" style="font-size:20px;">UGX #{statisticsBean.totalSavingsBalance}</div>
+                <div class="kpi-sub">Across all active accounts</div>
+            </div>
+
+            <div class="kpi-card sky">
+                <div class="kpi-icon">&#x2B06;</div>
+                <div class="kpi-label">Total Deposits</div>
+                <div class="kpi-value" style="font-size:20px;">UGX #{statisticsBean.totalDeposits}</div>
+                <div class="kpi-sub">#{statisticsBean.totalDepositCount} deposit transactions</div>
+            </div>
+
+            <div class="kpi-card orange">
+                <div class="kpi-icon">&#x2B07;</div>
+                <div class="kpi-label">Total Withdrawals</div>
+                <div class="kpi-value" style="font-size:20px;">UGX #{statisticsBean.totalWithdrawals}</div>
+                <div class="kpi-sub">#{statisticsBean.totalWithdrawalCount} withdrawal transactions</div>
+            </div>
+        </div>
+
+        <!-- KPI Row 2: Loans -->
+        <div class="stats-kpi-grid">
+            <div class="kpi-card indigo">
+                <div class="kpi-icon">&#x1F4DC;</div>
+                <div class="kpi-label">Total Loans</div>
+                <div class="kpi-value">#{statisticsBean.totalLoans}</div>
+                <div class="kpi-sub">All-time loan applications</div>
+            </div>
+
+            <div class="kpi-card" style="border-left-color:#f59e0b;">
+                <div class="kpi-icon">&#x23F3;</div>
+                <div class="kpi-label">Pending Review</div>
+                <div class="kpi-value">#{statisticsBean.loansPending}</div>
+                <div class="kpi-sub"><span class="kpi-badge badge-orange">Needs Attention</span></div>
+            </div>
+
+            <div class="kpi-card green">
+                <div class="kpi-icon">&#x2705;</div>
+                <div class="kpi-label">Active Loans</div>
+                <div class="kpi-value">#{statisticsBean.loansActive}</div>
+                <div class="kpi-sub">UGX #{statisticsBean.principalActive} principal</div>
+            </div>
+
+            <div class="kpi-card red">
+                <div class="kpi-icon">&#x26A0;</div>
+                <div class="kpi-label">Defaulted Loans</div>
+                <div class="kpi-value">#{statisticsBean.loansDefaulted}</div>
+                <div class="kpi-sub">
+                    <span class="kpi-badge badge-red">#{statisticsBean.defaultRate}% Default Rate</span>
+                </div>
+            </div>
+
+            <div class="kpi-card teal">
+                <div class="kpi-icon">&#x1F3C6;</div>
+                <div class="kpi-label">Completed Loans</div>
+                <div class="kpi-value">#{statisticsBean.loansCompleted}</div>
+                <div class="kpi-sub"><span class="kpi-badge badge-green">#{statisticsBean.completionRate}% Completion</span></div>
+            </div>
+
+            <div class="kpi-card purple">
+                <div class="kpi-icon">&#x1F4B5;</div>
+                <div class="kpi-label">Total Principal</div>
+                <div class="kpi-value" style="font-size:18px;">UGX #{statisticsBean.totalPrincipalDisbursed}</div>
+                <div class="kpi-sub">All loan principal issued</div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+             CHARTS ROW 1: Loan Distribution + Savings Volume
+        ═══════════════════════════════════════════════ -->
+        <div class="section-divider">
+            <h2>&#x1F4CA; Loan Distribution</h2>
+        </div>
+
+        <div class="charts-grid">
+
+            <!-- Loan Status Doughnut -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span class="ct-icon">&#x1F355;</span> Loan Status Breakdown
+                    <span class="chart-subtitle">By count</span>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="loanStatusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Loan Amount Polar Area -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span class="ct-icon">&#x1F4B3;</span> Principal by Status (UGX M)
+                    <span class="chart-subtitle">Millions UGX</span>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="loanAmountChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Loan Approval Rates -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span class="ct-icon">&#x1F4C8;</span> Portfolio Health Rates
+                </div>
+                <div class="rate-bar-list" style="margin-top: 8px;">
+                    <div class="rate-bar-item">
+                        <div class="rate-bar-label">
+                            <span>Approval Rate</span>
+                            <span>#{statisticsBean.approvalRate}%</span>
+                        </div>
+                        <div class="rate-bar-track">
+                            <div class="rate-bar-fill fill-green" style="width: #{statisticsBean.approvalRate}%;"></div>
+                        </div>
+                    </div>
+                    <div class="rate-bar-item">
+                        <div class="rate-bar-label">
+                            <span>Completion Rate</span>
+                            <span>#{statisticsBean.completionRate}%</span>
+                        </div>
+                        <div class="rate-bar-track">
+                            <div class="rate-bar-fill fill-blue" style="width: #{statisticsBean.completionRate}%;"></div>
+                        </div>
+                    </div>
+                    <div class="rate-bar-item">
+                        <div class="rate-bar-label">
+                            <span>Default Rate</span>
+                            <span>#{statisticsBean.defaultRate}%</span>
+                        </div>
+                        <div class="rate-bar-track">
+                            <div class="rate-bar-fill fill-red" style="width: #{statisticsBean.defaultRate}%;"></div>
+                        </div>
+                    </div>
+                    <div class="rate-bar-item">
+                        <div class="rate-bar-label">
+                            <span>Deposit / Withdrawal Ratio</span>
+                            <span>#{statisticsBean.depositToWithdrawalRatio}x</span>
+                        </div>
+                        <div class="rate-bar-track">
+                            <div class="rate-bar-fill fill-orange" style="width: #{statisticsBean.depositToWithdrawalRatio gt 100 ? 100 : statisticsBean.depositToWithdrawalRatio}%;"></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="background:#f0fdf4; border-radius:10px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; color:#15803d; font-weight:700; text-transform:uppercase;">Pending</div>
+                            <div style="font-size:22px; font-weight:800; color:#166534;">#{statisticsBean.loansPending}</div>
+                        </div>
+                        <div style="background:#fff7ed; border-radius:10px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; color:#c2410c; font-weight:700; text-transform:uppercase;">Rejected</div>
+                            <div style="font-size:22px; font-weight:800; color:#9a3412;">#{statisticsBean.loansRejected}</div>
+                        </div>
+                        <div style="background:#eff6ff; border-radius:10px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; color:#1d4ed8; font-weight:700; text-transform:uppercase;">Approved</div>
+                            <div style="font-size:22px; font-weight:800; color:#1e3a8a;">#{statisticsBean.loansApproved}</div>
+                        </div>
+                        <div style="background:#f0fdf4; border-radius:10px; padding:14px; text-align:center;">
+                            <div style="font-size:11px; color:#15803d; font-weight:700; text-transform:uppercase;">Active</div>
+                            <div style="font-size:22px; font-weight:800; color:#166534;">#{statisticsBean.loansActive}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+             CHARTS ROW 2: Savings + Transactions
+        ═══════════════════════════════════════════════ -->
+        <div class="section-divider">
+            <h2>&#x1F4B0; Savings &amp; Transactions</h2>
+        </div>
+
+        <div class="charts-grid">
+            <!-- Deposits vs Withdrawals Bar -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span class="ct-icon">&#x1F4B5;</span> Deposits vs Withdrawals (UGX M)
+                    <span class="chart-subtitle">Total volume</span>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="savingsVolumeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Transaction Count Summary -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span class="ct-icon">&#x1F4CA;</span> Transaction Volume Summary
+                </div>
+                <div style="display:flex; flex-direction:column; gap:16px; margin-top:8px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:#f0fdf4; border-radius:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:24px;">&#x2B06;</span>
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:#15803d; text-transform:uppercase;">Total Deposits</div>
+                                <div style="font-size:20px; font-weight:800; color:#166534;">#{statisticsBean.totalDepositCount} txns</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:#15803d;">UGX #{statisticsBean.totalDeposits}</div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:#fff7ed; border-radius:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:24px;">&#x2B07;</span>
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:#c2410c; text-transform:uppercase;">Total Withdrawals</div>
+                                <div style="font-size:20px; font-weight:800; color:#9a3412;">#{statisticsBean.totalWithdrawalCount} txns</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:#c2410c;">UGX #{statisticsBean.totalWithdrawals}</div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:#eff6ff; border-radius:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:24px;">&#x1F501;</span>
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">All Transactions</div>
+                                <div style="font-size:20px; font-weight:800; color:#1e3a8a;">#{statisticsBean.totalTransactionCount} txns</div>
+                            </div>
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:#1d4ed8;">D/W Ratio: #{statisticsBean.depositToWithdrawalRatio}x</div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:#faf5ff; border-radius:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:24px;">&#x1F4B0;</span>
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase;">Net Portfolio Balance</div>
+                                <div style="font-size:20px; font-weight:800; color:#5b21b6;">UGX #{statisticsBean.totalSavingsBalance}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+             CHART ROW 3: Monthly Trend (Full Width)
+        ═══════════════════════════════════════════════ -->
+        <div class="section-divider">
+            <h2>&#x1F4C6; Monthly Activity Trend</h2>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card wide">
+                <div class="chart-title">
+                    <span class="ct-icon">&#x1F4C8;</span> Loan Applications &amp; Deposit Activity — Last 6 Months
+                    <span class="chart-subtitle">Count per month</span>
+                </div>
+                <div class="chart-wrap tall">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+             SUMMARY TABLE
+        ═══════════════════════════════════════════════ -->
+        <div class="section-divider">
+            <h2>&#x1F4CB; Full Statistics Summary</h2>
+        </div>
+
+        <div class="chart-card" style="overflow-x:auto;">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Category</th>
+                        <th>Value</th>
+                        <th>Share / Rate</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Members</strong></td>
+                        <td>Members</td>
+                        <td>#{statisticsBean.totalMembers}</td>
+                        <td>100%</td>
+                        <td><span class="pct-pill" style="background:#dcfce7;color:#15803d;">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Active Members</td>
+                        <td>Members</td>
+                        <td>#{statisticsBean.activeMembers}</td>
+                        <td>#{statisticsBean.totalMembers gt 0 ? (statisticsBean.activeMembers * 100 / statisticsBean.totalMembers) : 0}%</td>
+                        <td><span class="pct-pill" style="background:#dcfce7;color:#15803d;">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Pending Verification</td>
+                        <td>Members</td>
+                        <td>#{statisticsBean.pendingMembers}</td>
+                        <td>#{statisticsBean.totalMembers gt 0 ? (statisticsBean.pendingMembers * 100 / statisticsBean.totalMembers) : 0}%</td>
+                        <td><span class="pct-pill" style="background:#fff7ed;color:#c2410c;">Pending</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Savings Balance</strong></td>
+                        <td>Savings</td>
+                        <td>UGX #{statisticsBean.totalSavingsBalance}</td>
+                        <td>&#x2014;</td>
+                        <td><span class="pct-pill" style="background:#f0fdf4;color:#15803d;">Healthy</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Deposits</strong></td>
+                        <td>Transactions</td>
+                        <td>UGX #{statisticsBean.totalDeposits}</td>
+                        <td>#{statisticsBean.totalDepositCount} txns</td>
+                        <td><span class="pct-pill" style="background:#eff6ff;color:#1d4ed8;">Credit</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Withdrawals</strong></td>
+                        <td>Transactions</td>
+                        <td>UGX #{statisticsBean.totalWithdrawals}</td>
+                        <td>#{statisticsBean.totalWithdrawalCount} txns</td>
+                        <td><span class="pct-pill" style="background:#fff7ed;color:#c2410c;">Debit</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>All Loan Applications</strong></td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.totalLoans}</td>
+                        <td>100%</td>
+                        <td><span class="pct-pill" style="background:#f1f5f9;color:#475569;">All</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Pending</td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.loansPending}</td>
+                        <td>#{statisticsBean.totalLoans gt 0 ? (statisticsBean.loansPending * 100 / statisticsBean.totalLoans) : 0}%</td>
+                        <td><span class="pct-pill" style="background:#fff7ed;color:#c2410c;">Review</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Approved</td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.loansApproved}</td>
+                        <td>#{statisticsBean.totalLoans gt 0 ? (statisticsBean.loansApproved * 100 / statisticsBean.totalLoans) : 0}%</td>
+                        <td><span class="pct-pill" style="background:#eff6ff;color:#1d4ed8;">Approved</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Active (Disbursed)</td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.loansActive}</td>
+                        <td>#{statisticsBean.totalLoans gt 0 ? (statisticsBean.loansActive * 100 / statisticsBean.totalLoans) : 0}%</td>
+                        <td><span class="pct-pill" style="background:#dcfce7;color:#15803d;">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Completed</td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.loansCompleted}</td>
+                        <td>#{statisticsBean.completionRate}%</td>
+                        <td><span class="pct-pill" style="background:#d1fae5;color:#065f46;">Done</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Defaulted</td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.loansDefaulted}</td>
+                        <td>#{statisticsBean.defaultRate}%</td>
+                        <td><span class="pct-pill" style="background:#fee2e2;color:#dc2626;">Risk</span></td>
+                    </tr>
+                    <tr>
+                        <td>&#x2022; Rejected</td>
+                        <td>Loans</td>
+                        <td>#{statisticsBean.loansRejected}</td>
+                        <td>#{statisticsBean.totalLoans gt 0 ? (statisticsBean.loansRejected * 100 / statisticsBean.totalLoans) : 0}%</td>
+                        <td><span class="pct-pill" style="background:#fef2f2;color:#991b1b;">Rejected</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Principal Issued</strong></td>
+                        <td>Loans</td>
+                        <td>UGX #{statisticsBean.totalPrincipalDisbursed}</td>
+                        <td>&#x2014;</td>
+                        <td><span class="pct-pill" style="background:#faf5ff;color:#7c3aed;">Portfolio</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Approval Rate</strong></td>
+                        <td>Performance</td>
+                        <td>#{statisticsBean.approvalRate}%</td>
+                        <td>&#x2014;</td>
+                        <td><span class="pct-pill" style="background:#dcfce7;color:#15803d;">KPI</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Default Rate</strong></td>
+                        <td>Performance</td>
+                        <td>#{statisticsBean.defaultRate}%</td>
+                        <td>&#x2014;</td>
+                        <td><span class="pct-pill" style="background:#fee2e2;color:#dc2626;">KPI</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deposit / Withdrawal Ratio</strong></td>
+                        <td>Performance</td>
+                        <td>#{statisticsBean.depositToWithdrawalRatio}x</td>
+                        <td>&#x2014;</td>
+                        <td><span class="pct-pill" style="background:#eff6ff;color:#1d4ed8;">KPI</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Hidden data bridge container for JSF to JS JSON transfer -->
+        <div id="saccoStatsData"
+             data-months="#{statisticsBean.monthLabelsJson}"
+             data-loans-d="#{statisticsBean.loanStatusChartJson}"
+             data-loan-amt="#{statisticsBean.loanAmountChartJson}"
+             data-sav-vol="#{statisticsBean.savingsVolumeChartJson}"
+             data-loan-tr="#{statisticsBean.monthlyLoanTrendJson}"
+             data-dep-tr="#{statisticsBean.monthlyDepositTrendJson}"
+             style="display:none;"></div>
+
+        <!-- Chart.js CDN + Initialization -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+        function renderSaccoCharts() {
+            if (typeof Chart === 'undefined') {
+                setTimeout(renderSaccoCharts, 100);
+                return;
+            }
+            try {
+                var dataEl = document.getElementById('saccoStatsData');
+                if (!dataEl) return;
+
+                var MONTHS   = JSON.parse(dataEl.getAttribute('data-months') || '[]');
+                var LOANS_D  = JSON.parse(dataEl.getAttribute('data-loans-d') || '[]');
+                var LOAN_AMT = JSON.parse(dataEl.getAttribute('data-loan-amt') || '[]');
+                var SAV_VOL  = JSON.parse(dataEl.getAttribute('data-sav-vol') || '[]');
+                var LOAN_TR  = JSON.parse(dataEl.getAttribute('data-loan-tr') || '[]');
+                var DEP_TR   = JSON.parse(dataEl.getAttribute('data-dep-tr') || '[]');
+
+                Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+                Chart.defaults.font.size   = 12;
+                Chart.defaults.color       = '#475569';
+
+                // 1. Loan Status Doughnut
+                var el1 = document.getElementById('loanStatusChart');
+                if (el1) {
+                    new Chart(el1, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Pending', 'Approved', 'Active', 'Completed', 'Defaulted', 'Rejected'],
+                            datasets: [{
+                                data: LOANS_D,
+                                backgroundColor: ['#f59e0b','#3b82f6','#22c55e','#06b6d4','#ef4444','#94a3b8'],
+                                borderWidth: 2,
+                                borderColor: '#fff',
+                                hoverBorderWidth: 3
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            cutout: '65%',
+                            plugins: {
+                                legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } }
+                            }
+                        }
+                    });
+                }
+
+                // 2. Loan Principal Polar Area
+                var el2 = document.getElementById('loanAmountChart');
+                if (el2) {
+                    new Chart(el2, {
+                        type: 'polarArea',
+                        data: {
+                            labels: ['Pending', 'Active', 'Completed', 'Defaulted'],
+                            datasets: [{
+                                data: LOAN_AMT,
+                                backgroundColor: ['rgba(245,158,11,0.7)','rgba(34,197,94,0.7)','rgba(6,182,212,0.7)','rgba(239,68,68,0.7)'],
+                                borderColor: ['#f59e0b','#22c55e','#06b6d4','#ef4444'],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { padding: 14, usePointStyle: true } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(ctx) { return ' UGX ' + ctx.parsed.r.toFixed(2) + 'M'; }
+                                    }
+                                }
+                            },
+                            scales: { r: { ticks: { backdropColor: 'transparent' } } }
+                        }
+                    });
+                }
+
+                // 3. Savings Volume Bar
+                var el3 = document.getElementById('savingsVolumeChart');
+                if (el3) {
+                    new Chart(el3, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Total Deposits', 'Total Withdrawals'],
+                            datasets: [{
+                                label: 'UGX (Millions)',
+                                data: SAV_VOL,
+                                backgroundColor: ['rgba(34,197,94,0.8)', 'rgba(239,68,68,0.8)'],
+                                borderColor: ['#16a34a','#dc2626'],
+                                borderWidth: 2,
+                                borderRadius: 10,
+                                borderSkipped: false
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: function(ctx) { return ' UGX ' + ctx.parsed.y.toFixed(2) + 'M'; } } }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { callback: function(v) { return v + 'M'; } } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+
+                if (el4) {
+                    if (MONTHS) {
+                        if (MONTHS.length) {
+                            new Chart(el4, {
+                        type: 'line',
+                        data: {
+                            labels: MONTHS,
+                            datasets: [
+                                {
+                                    label: 'Loan Applications',
+                                    data: LOAN_TR,
+                                    borderColor: '#3b82f6',
+                                    backgroundColor: 'rgba(59,130,246,0.1)',
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointBackgroundColor: '#3b82f6',
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7,
+                                    borderWidth: 2
+                                },
+                                {
+                                    label: 'Deposit Transactions',
+                                    data: DEP_TR,
+                                    borderColor: '#22c55e',
+                                    backgroundColor: 'rgba(34,197,94,0.08)',
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointBackgroundColor: '#22c55e',
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7,
+                                    borderWidth: 2
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
+                                tooltip: { backgroundColor: 'rgba(15,23,42,0.9)', padding: 12, cornerRadius: 10 }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } },
+                                x: { grid: { color: '#f8fafc' } }
+                            }
+                        }
+                    });
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error initializing Chart.js graphs: ", err);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderSaccoCharts);
+        } else {
+            renderSaccoCharts();
+        }
+        </script>
+
+    </ui:define>
+</ui:composition>
+</html>
