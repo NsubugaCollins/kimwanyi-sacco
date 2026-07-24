@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Dashboard Overview</ui:define>
+
+    <ui:define name="content">
+
+        <!-- Personalized Welcome Banner -->
+        <div class="dashboard-welcome-banner">
+            <div class="welcome-left">
+                <div class="welcome-avatar">
+                    #{empty authBean.loggedInUsername ? 'KS' : authBean.loggedInUsername.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                    <h1 class="welcome-greeting">Welcome back, #{authBean.loggedInUsername}! &#x1F44B;</h1>
+                    <p class="welcome-subtext">
+                        Role: <strong>#{authBean.roleDisplayName}</strong>
+                        &#160;&#xB7;&#160; Kimwanyi SACCO Financial Portal
+                    </p>
+                </div>
+            </div>
+            <div class="welcome-right">
+                <div class="welcome-date-chip">
+                    &#x1F4C5; <span id="dashDate"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Metrics Row -->
+        <div class="metrics-grid">
+            <div class="metric-card metric-highlight-blue">
+                <div class="metric-header">
+                    <span class="metric-title">Savings Balance</span>
+                    <div class="metric-icon-box blue">&#x1F4B0;</div>
+                </div>
+                <div class="metric-value">UGX 2,450,000</div>
+                <div class="metric-footer">
+                    <span class="trend-up">&#x2191; +5.2%</span>
+                    <span style="color: var(--text-muted);">vs last month</span>
+                </div>
+            </div>
+
+            <div class="metric-card metric-highlight-amber">
+                <div class="metric-header">
+                    <span class="metric-title">Active Loans</span>
+                    <div class="metric-icon-box amber">&#x1F4DC;</div>
+                </div>
+                <div class="metric-value">UGX 1,200,000</div>
+                <div class="metric-footer">
+                    <span style="color: var(--warning-600);">&#x23F3; 12 months remaining</span>
+                </div>
+            </div>
+
+            <h:panelGroup rendered="#{authBean.isManager() or authBean.isAdmin()}">
+                <div class="metric-card metric-highlight-green">
+                    <div class="metric-header">
+                        <span class="metric-title">Total Members</span>
+                        <div class="metric-icon-box green">&#x1F465;</div>
+                    </div>
+                    <div class="metric-value">248</div>
+                    <div class="metric-footer">
+                        <span class="trend-up">&#x2191; +12 new</span>
+                        <span style="color: var(--text-muted);">this month</span>
+                    </div>
+                </div>
+            </h:panelGroup>
+
+            <h:panelGroup rendered="#{authBean.isCashier() or authBean.isManager() or authBean.isLoanOfficer()}">
+                <h:outputLink value="#{request.contextPath}/loans.xhtml" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="metric-card metric-highlight-cyan" style="cursor: pointer;">
+                        <div class="metric-header">
+                            <span class="metric-title">Pending Loans &amp; Transactions</span>
+                            <div class="metric-icon-box cyan">&#x1F504;</div>
+                        </div>
+                        <div class="metric-value">#{dashboardBean.pendingLoanApprovals}</div>
+                        <div class="metric-footer">
+                            <span style="color: var(--info-600); font-weight: 600;">Click to review &amp; disburse &#x2192;</span>
+                        </div>
+                    </div>
+                </h:outputLink>
+            </h:panelGroup>
+
+            <div class="metric-card metric-highlight-cyan">
+                <div class="metric-header">
+                    <span class="metric-title">Notifications</span>
+                    <div class="metric-icon-box cyan">&#x1F514;</div>
+                </div>
+                <div class="metric-value">#{notificationBean.unreadCount}</div>
+                <div class="metric-footer">
+                    <span style="color: var(--info-600);">Unread messages</span>
+                </div>
+            </div>
+
+            <h:panelGroup rendered="#{authBean.isManager() or authBean.isAdmin()}">
+                <h:outputLink value="#{request.contextPath}/audit/audit.xhtml" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="metric-card metric-highlight-blue" style="cursor: pointer;">
+                        <div class="metric-header">
+                            <span class="metric-title">Audit Logs &amp; Security</span>
+                            <div class="metric-icon-box blue">&#x1F4CB;</div>
+                        </div>
+                        <div class="metric-value">#{auditBean.totalCount}</div>
+                        <div class="metric-footer">
+                            <span style="color: var(--success-600); font-weight: 600;">&#x2714; System Tracked</span>
+                            <span style="color: var(--text-muted);">Click to view logs &#x2192;</span>
+                        </div>
+                    </div>
+                </h:outputLink>
+            </h:panelGroup>
+        </div>
+
+        <!-- Two-Column Content Area -->
+        <div class="dashboard-two-col">
+
+            <!-- Quick Actions Panel -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">&#x26A1; Quick Actions</h3>
+                    <span style="font-size: 12px; color: var(--text-muted);">Role-based shortcuts</span>
+                </div>
+                <div class="panel-body">
+                    <div class="quick-actions-grid">
+
+                        <h:outputLink value="#{request.contextPath}/savings.xhtml" styleClass="quick-action-tile tile-blue">
+                            <div class="tile-icon">&#x1F4B0;</div>
+                            <div class="tile-label">My Savings</div>
+                            <div class="tile-desc">View balance &amp; transactions</div>
+                        </h:outputLink>
+
+                        <h:outputLink value="#{request.contextPath}/loans.xhtml" styleClass="quick-action-tile tile-amber">
+                            <div class="tile-icon">&#x1F4DC;</div>
+                            <div class="tile-label">Loans &amp; Credit</div>
+                            <div class="tile-desc">Manage credit facilities</div>
+                        </h:outputLink>
+
+                        <h:panelGroup rendered="#{authBean.isManager() or authBean.isLoanOfficer()}">
+                            <h:outputLink value="#{request.contextPath}/members.xhtml" styleClass="quick-action-tile tile-green">
+                                <div class="tile-icon">&#x1F465;</div>
+                                <div class="tile-label">Members</div>
+                                <div class="tile-desc">Browse member directory</div>
+                            </h:outputLink>
+                        </h:panelGroup>
+
+                        <h:panelGroup rendered="#{authBean.isManager()}">
+                            <h:outputLink value="#{request.contextPath}/ledger.xhtml" styleClass="quick-action-tile tile-cyan">
+                                <div class="tile-icon">&#x1F4D8;</div>
+                                <div class="tile-label">General Ledger</div>
+                                <div class="tile-desc">Accounting & bookkeeping</div>
+                            </h:outputLink>
+                        </h:panelGroup>
+
+                        <h:panelGroup rendered="#{authBean.isManager() or authBean.isAdmin()}">
+                            <h:outputLink value="#{request.contextPath}/audit/audit.xhtml" styleClass="quick-action-tile tile-red">
+                                <div class="tile-icon">&#x1F4CB;</div>
+                                <div class="tile-label">Audit Logs</div>
+                                <div class="tile-desc">System activity & security trail</div>
+                            </h:outputLink>
+                        </h:panelGroup>
+
+                        <h:outputLink value="#{request.contextPath}/notifications.xhtml" styleClass="quick-action-tile tile-purple">
+                            <div class="tile-icon">&#x1F514;</div>
+                            <div class="tile-label">Notifications</div>
+                            <div class="tile-desc">Messages &amp; email alerts</div>
+                        </h:outputLink>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Panel -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <h3 class="panel-title">&#x1F55C; Recent Activity</h3>
+                    <span style="font-size: 12px; color: var(--text-muted);">Last 5 events</span>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <ul class="activity-feed">
+                        <li class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-content">
+                                <div class="activity-title">Deposit Posted</div>
+                                <div class="activity-desc">UGX 250,000 credited to SAV-001982</div>
+                                <div class="activity-time">2 hours ago</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot dot-blue"></div>
+                            <div class="activity-content">
+                                <div class="activity-title">Loan Application</div>
+                                <div class="activity-desc">New loan request #L-0041 submitted</div>
+                                <div class="activity-time">Yesterday at 3:12 PM</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot dot-amber"></div>
+                            <div class="activity-content">
+                                <div class="activity-title">Profile Updated</div>
+                                <div class="activity-desc">Phone number and address changed</div>
+                                <div class="activity-time">2 days ago</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-content">
+                                <div class="activity-title">Monthly Contribution</div>
+                                <div class="activity-desc">UGX 100,000 auto-saved for July</div>
+                                <div class="activity-time">July 1, 2026</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot dot-cyan"></div>
+                            <div class="activity-content">
+                                <div class="activity-title">Account Registered</div>
+                                <div class="activity-desc">Savings account SAV-001982 activated</div>
+                                <div class="activity-time">June 15, 2026</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Savings Account Summary Card -->
+        <div class="card-panel" style="background: linear-gradient(135deg, var(--primary-800) 0%, var(--primary-600) 100%); color: #ffffff; border: none;">
+            <div class="panel-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary-100); margin-bottom: 6px;">Your Primary Savings Account</div>
+                        <h2 style="font-size: 22px; color: #ffffff; margin-bottom: 4px;">#{empty authBean.username ? 'Account Holder' : authBean.username}</h2>
+                        <div style="font-size: 14px; color: var(--primary-100);">Account No: <strong>SAV-001982</strong> &#160;&#xB7;&#160; Type: Regular Savings</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary-100); margin-bottom: 6px;">Available Balance</div>
+                        <div style="font-size: 36px; font-weight: 800; color: #ffffff;">UGX 2,450,000.00</div>
+                        <h:outputLink value="#{request.contextPath}/savings.xhtml"
+                                      style="display: inline-block; margin-top: 12px; padding: 10px 24px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; backdrop-filter: blur(4px);">
+                            View Transactions &#x2192;
+                        </h:outputLink>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-UG', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+        </script>
+
+    </ui:define>
+</ui:composition>

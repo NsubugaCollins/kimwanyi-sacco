@@ -4,17 +4,30 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
 public class HibernateUtil {
-    private static final SessionFactory sessionFactory;
+
+    private static SessionFactory sessionFactory;
 
     static {
-        try{
-            sessionFactory = new Configuration().configure().buildSessionFactory();
-        }catch (Exception e){
-            throw new RuntimeException(e);
+        try {
+            sessionFactory =
+                    new Configuration()
+                            .configure()
+                            .buildSessionFactory();
+        }
+        catch(Throwable e){
+            System.err.println("[HibernateUtil] FATAL: SessionFactory creation failed: " + e.getMessage());
+            e.printStackTrace(System.err);
+            sessionFactory = null;
         }
     }
 
     public static SessionFactory getSessionFactory(){
         return sessionFactory;
+    }
+
+    public static void shutdown(){
+        if (sessionFactory != null && !sessionFactory.isClosed()) {
+            sessionFactory.close();
+        }
     }
 }

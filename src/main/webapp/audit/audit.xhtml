@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Audit Logs &amp; Security Trail</ui:define>
+
+    <ui:define name="content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">&#x1F50D; System Audit Trail &amp; Logs</h1>
+                <p class="page-subtitle">Real-time database audit log records, security events, and administrative trail</p>
+            </div>
+            <div class="page-actions">
+                <span class="badge badge-system">&#x1F6E1;&#xFE0F; Database Auditing Active</span>
+                <span class="badge badge-info">#{auditBean.filteredAuditLogs.size()} displayed / #{auditBean.totalCount} total</span>
+            </div>
+        </div>
+
+        <!-- 4 KPI Overview Cards -->
+        <div class="audit-metrics-grid">
+            <div class="audit-metric-card blue">
+                <div class="metric-top">
+                    <span class="metric-label">Total Audit Events</span>
+                    <span class="metric-icon">&#x1F4CA;</span>
+                </div>
+                <div class="metric-num">#{auditBean.totalCount}</div>
+                <div class="metric-sub text-blue">&#x2714; Recorded in database</div>
+            </div>
+
+            <div class="audit-metric-card green">
+                <div class="metric-top">
+                    <span class="metric-label">Successful Operations</span>
+                    <span class="metric-icon">&#x2705;</span>
+                </div>
+                <div class="metric-num">#{auditBean.successCount}</div>
+                <div class="metric-sub text-green">&#x2191; #{auditBean.successPercentage}% success rate</div>
+            </div>
+
+            <div class="audit-metric-card red">
+                <div class="metric-top">
+                    <span class="metric-label">Security &amp; Failures</span>
+                    <span class="metric-icon">&#x26A0;&#xFE0F;</span>
+                </div>
+                <div class="metric-num">#{auditBean.failedCount}</div>
+                <div class="metric-sub #{auditBean.failedCount > 0 ? 'text-red' : 'text-green'}">
+                    #{auditBean.failedCount > 0 ? 'Requires manager attention' : 'No critical alerts'}
+                </div>
+            </div>
+
+            <div class="audit-metric-card purple">
+                <div class="metric-top">
+                    <span class="metric-label">Today's Activity</span>
+                    <span class="metric-icon">&#x1F552;</span>
+                </div>
+                <div class="metric-num">#{auditBean.todayCount}</div>
+                <div class="metric-sub text-purple">Events logged today</div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Controls Bar -->
+        <div class="card-panel audit-filter-card">
+            <h:form id="auditFilterForm">
+                <div class="filter-controls-row">
+
+                    <!-- Search Input -->
+                    <div class="filter-group flex-2">
+                        <label class="filter-label">&#x1F50D; Keyword Search</label>
+                        <h:inputText value="#{auditBean.searchTerm}" 
+                                     styleClass="form-input" 
+                                     placeholder="Search by User ID, Action, Entity, IP, or Description..."/>
+                    </div>
+
+                    <!-- Action Filter -->
+                    <div class="filter-group flex-1">
+                        <label class="filter-label">&#x1F3F7;&#xFE0F; Action Type</label>
+                        <h:selectOneMenu value="#{auditBean.actionFilter}" styleClass="form-select">
+                            <f:selectItems value="#{auditBean.availableActions}" var="act" itemValue="#{act}" itemLabel="#{act == 'ALL' ? 'All Action Types' : act}"/>
+                        </h:selectOneMenu>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="filter-group flex-1">
+                        <label class="filter-label">&#x1F890; Status</label>
+                        <h:selectOneMenu value="#{auditBean.statusFilter}" styleClass="form-select">
+                            <f:selectItem itemValue="ALL" itemLabel="All Statuses"/>
+                            <f:selectItem itemValue="SUCCESS" itemLabel="SUCCESS Only"/>
+                            <f:selectItem itemValue="FAILED" itemLabel="FAILED Only"/>
+                        </h:selectOneMenu>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="filter-group filter-actions">
+                        <label class="filter-label">&amp;nbsp;</label>
+                        <div style="display: flex; gap: 8px;">
+                            <h:commandButton value="Filter Logs" action="#{auditBean.getFilteredAuditLogs}" styleClass="btn btn-primary btn-sm">
+                                <f:ajax execute="@form" render=":auditTableForm :detailModalForm"/>
+                            </h:commandButton>
+
+                            <h:commandButton value="Reset" action="#{auditBean.resetFilters}" styleClass="btn btn-outline btn-sm">
+                                <f:ajax execute="@form" render="@form :auditTableForm :detailModalForm"/>
+                            </h:commandButton>
+                        </div>
+                    </div>
+
+                </div>
+            </h:form>
+        </div>
+
+        <!-- Audit Logs Table -->
+        <h:form id="auditTableForm">
+            <div class="card-panel">
+                <div class="panel-body" style="padding: 0; overflow-x: auto;">
+                    <table class="data-table audit-data-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Performer (User ID)</th>
+                                <th>Action Taken</th>
+                                <th>Target Entity</th>
+                                <th>Activity Description</th>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                                <th style="text-align: center;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ui:repeat value="#{auditBean.filteredAuditLogs}" var="log">
+                                <tr>
+                                    <!-- Timestamp -->
+                                    <td class="cell-date">
+                                        <div class="date-box">
+                                            <span class="date-icon">&#x1F4C5;</span>
+                                            <span>#{log.createdAt}</span>
+                                        </div>
+                                    </td>
+
+                                    <!-- User ID -->
+                                    <td>
+                                        <div class="user-chip">
+                                            <span class="user-icon">&#x1F464;</span>
+                                            <span class="user-id-text">ID: #{log.userId != null ? log.userId : 'System'}</span>
+                                        </div>
+                                    </td>
+
+                                    <!-- Action -->
+                                    <td>
+                                        <span class="action-tag #{log.status == 'FAILED' ? 'tag-failed' : (log.action.contains('LOGIN') ? 'tag-login' : (log.action.contains('LOAN') ? 'tag-loan' : (log.action.contains('MEMBER') ? 'tag-member' : 'tag-default')))}">
+                                            #{log.action}
+                                        </span>
+                                    </td>
+
+                                    <!-- Target Entity -->
+                                    <td>
+                                        <ui:fragment rendered="#{not empty log.entityName}">
+                                            <div class="entity-chip">
+                                                <span class="entity-name">#{log.entityName}</span>
+                                                <h:panelGroup rendered="#{not empty log.entityId}">
+                                                    <span class="entity-id">##{log.entityId}</span>
+                                                </h:panelGroup>
+                                            </div>
+                                        </ui:fragment>
+                                        <ui:fragment rendered="#{empty log.entityName}">
+                                            <span class="text-muted">-</span>
+                                        </ui:fragment>
+                                    </td>
+
+                                    <!-- Description -->
+                                    <td class="cell-desc" title="#{log.description}">
+                                        #{log.description}
+                                    </td>
+
+                                    <!-- IP Address -->
+                                    <td class="cell-ip">
+                                        <span class="ip-pill">#{log.ipAddress != null ? log.ipAddress : '127.0.0.1'}</span>
+                                    </td>
+
+                                    <!-- Status Badge -->
+                                    <td>
+                                        <span class="status-pill #{log.status == 'SUCCESS' ? 'pill-success' : 'pill-failed'}">
+                                            <span class="status-dot"></span>
+                                            #{log.status}
+                                        </span>
+                                    </td>
+
+                                    <!-- Detail Action -->
+                                    <td style="text-align: center;">
+                                        <h:commandLink styleClass="btn-icon-link" title="Inspect Audit Record">
+                                            <f:ajax listener="#{auditBean.selectLog(log)}" render=":detailModalForm"/>
+                                            &#x1F50D; View
+                                        </h:commandLink>
+                                    </td>
+                                </tr>
+                            </ui:repeat>
+
+                            <!-- Empty State -->
+                            <ui:fragment rendered="#{empty auditBean.filteredAuditLogs}">
+                                <tr>
+                                    <td colspan="8" class="empty-audit-state">
+                                        <div class="empty-state-box">
+                                            <div class="empty-icon">&#x1F4CB;</div>
+                                            <h3>No Audit Records Found</h3>
+                                            <p>No database audit logs match your search criteria. Try adjusting the search term or status filter.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </ui:fragment>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </h:form>
+
+        <!-- Audit Log Detail Modal -->
+        <h:form id="detailModalForm">
+            <h:panelGroup rendered="#{not empty auditBean.selectedLog}">
+                <div class="modal-backdrop">
+                    <div class="modal-dialog">
+                        <div class="modal-header">
+                            <h3>&#x1F50D; Audit Record Details</h3>
+                            <h:commandLink action="#{auditBean.clearSelection}" styleClass="modal-close-btn">
+                                <f:ajax render=":detailModalForm"/>
+                                &amp;times;
+                            </h:commandLink>
+                        </div>
+                        <div class="modal-body">
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Log ID</span>
+                                    <span class="detail-value">##{auditBean.selectedLog.id}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Timestamp</span>
+                                    <span class="detail-value">#{auditBean.selectedLog.createdAt}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">User / Performer ID</span>
+                                    <span class="detail-value">#{auditBean.selectedLog.userId != null ? auditBean.selectedLog.userId : 'System'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Action</span>
+                                    <span class="detail-value font-bold">#{auditBean.selectedLog.action}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Entity Name</span>
+                                    <span class="detail-value">#{auditBean.selectedLog.entityName != null ? auditBean.selectedLog.entityName : 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Entity ID</span>
+                                    <span class="detail-value">#{auditBean.selectedLog.entityId != null ? auditBean.selectedLog.entityId : 'N/A'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">IP Address</span>
+                                    <span class="detail-value font-mono">#{auditBean.selectedLog.ipAddress}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Status</span>
+                                    <span class="status-pill #{auditBean.selectedLog.status == 'SUCCESS' ? 'pill-success' : 'pill-failed'}">
+                                        <span class="status-dot"></span>
+                                        #{auditBean.selectedLog.status}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="detail-desc-box">
+                                <span class="detail-label">Description Payload</span>
+                                <div class="desc-content">#{auditBean.selectedLog.description}</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <h:commandButton value="Close Inspector" action="#{auditBean.clearSelection}" styleClass="btn btn-outline btn-sm">
+                                <f:ajax render=":detailModalForm"/>
+                            </h:commandButton>
+                        </div>
+                    </div>
+                </div>
+            </h:panelGroup>
+        </h:form>
+
+        <!-- Custom CSS for Audit Dashboard -->
+        <style>
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 24px;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .page-title {
+                font-size: 24px;
+                font-weight: 700;
+                color: var(--text-main);
+                margin: 0 0 4px 0;
+            }
+            .page-subtitle {
+                font-size: 14px;
+                color: var(--text-muted);
+                margin: 0;
+            }
+            .page-actions {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .badge {
+                display: inline-block;
+                padding: 6px 14px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .badge-system {
+                background: rgba(37, 99, 235, 0.1);
+                color: var(--primary-600);
+                border: 1px solid rgba(37, 99, 235, 0.2);
+            }
+            .badge-info {
+                background: var(--info-100);
+                color: var(--info-600);
+            }
+
+            /* Metrics Grid */
+            .audit-metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 18px;
+                margin-bottom: 24px;
+            }
+            .audit-metric-card {
+                background: #ffffff;
+                border-radius: var(--radius-md);
+                padding: 20px;
+                border: 1px solid var(--border-color);
+                box-shadow: var(--shadow-sm);
+                transition: var(--transition-fast);
+            }
+            .audit-metric-card:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md);
+            }
+            .metric-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            .metric-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text-muted);
+            }
+            .metric-icon {
+                font-size: 20px;
+            }
+            .metric-num {
+                font-size: 28px;
+                font-weight: 800;
+                color: var(--text-main);
+                line-height: 1.1;
+                margin-bottom: 8px;
+            }
+            .metric-sub {
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .text-blue { color: var(--primary-600); }
+            .text-green { color: var(--success-600); }
+            .text-red { color: var(--danger-600); }
+            .text-purple { color: #8b5cf6; }
+
+            /* Filter Controls Bar */
+            .audit-filter-card {
+                padding: 18px 20px;
+                margin-bottom: 24px;
+            }
+            .filter-controls-row {
+                display: flex;
+                gap: 16px;
+                align-items: flex-end;
+                flex-wrap: wrap;
+            }
+            .filter-group {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .flex-1 { flex: 1; min-width: 160px; }
+            .flex-2 { flex: 2; min-width: 260px; }
+            .filter-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-muted);
+            }
+            .form-input, .form-select {
+                width: 100%;
+                padding: 9px 14px;
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-sm);
+                font-size: 13px;
+                background: #ffffff;
+                color: var(--text-main);
+                transition: var(--transition-fast);
+            }
+            .form-input:focus, .form-select:focus {
+                border-color: var(--primary-500);
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            }
+
+            /* Table Styling */
+            .audit-data-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }
+            .audit-data-table th {
+                text-align: left;
+                padding: 14px 18px;
+                background: #f8fafc;
+                color: var(--text-muted);
+                font-weight: 700;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 1px solid var(--border-color);
+                white-space: nowrap;
+            }
+            .audit-data-table td {
+                padding: 14px 18px;
+                border-bottom: 1px solid var(--border-color);
+                color: var(--text-main);
+                vertical-align: middle;
+            }
+            .audit-data-table tbody tr {
+                transition: var(--transition-fast);
+            }
+            .audit-data-table tbody tr:hover {
+                background: #f1f5f9;
+            }
+
+            /* Cells & Chips */
+            .date-box {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--text-muted);
+                white-space: nowrap;
+            }
+            .user-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                background: #f1f5f9;
+                border-radius: 14px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .action-tag {
+                display: inline-block;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.3px;
+                white-space: nowrap;
+            }
+            .tag-login { background: #e0f2fe; color: #0284c7; }
+            .tag-loan { background: #fef3c7; color: #b45309; }
+            .tag-member { background: #dcfce7; color: #15803d; }
+            .tag-failed { background: #fee2e2; color: #b91c1c; }
+            .tag-default { background: #f1f5f9; color: #475569; }
+
+            .entity-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .entity-name { font-weight: 600; color: var(--text-main); }
+            .entity-id {
+                font-size: 11px;
+                padding: 1px 6px;
+                background: #e2e8f0;
+                border-radius: 10px;
+                color: var(--text-muted);
+            }
+
+            .cell-desc {
+                max-width: 280px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 13px;
+                color: #334155;
+            }
+
+            .ip-pill {
+                font-family: monospace;
+                font-size: 12px;
+                padding: 3px 8px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 4px;
+                color: #64748b;
+            }
+
+            .status-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+            }
+            .status-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+            }
+            .pill-success { background: #d1fae5; color: #047857; }
+            .pill-success .status-dot { background: #10b981; }
+            .pill-failed { background: #fee2e2; color: #b91c1c; }
+            .pill-failed .status-dot { background: #ef4444; }
+
+            .btn-icon-link {
+                color: var(--primary-600);
+                font-weight: 600;
+                font-size: 12px;
+                text-decoration: none;
+                cursor: pointer;
+                padding: 4px 10px;
+                border-radius: 4px;
+                background: rgba(37, 99, 235, 0.08);
+                transition: var(--transition-fast);
+            }
+            .btn-icon-link:hover {
+                background: rgba(37, 99, 235, 0.18);
+            }
+
+            /* Empty State */
+            .empty-audit-state {
+                text-align: center;
+                padding: 60px 20px !important;
+            }
+            .empty-state-box {
+                max-width: 400px;
+                margin: 0 auto;
+            }
+            .empty-icon { font-size: 44px; margin-bottom: 12px; }
+            .empty-state-box h3 { margin-bottom: 8px; color: var(--text-main); }
+            .empty-state-box p { color: var(--text-muted); font-size: 14px; }
+
+            /* Detail Modal */
+            .modal-backdrop {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(15, 23, 42, 0.6);
+                backdrop-filter: blur(4px);
+                z-index: 999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+            .modal-dialog {
+                background: #ffffff;
+                border-radius: var(--radius-lg);
+                width: 100%;
+                max-width: 600px;
+                box-shadow: var(--shadow-xl);
+                overflow: hidden;
+                animation: modalFade 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            @keyframes modalFade {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
+            }
+            .modal-header {
+                padding: 18px 24px;
+                background: #f8fafc;
+                border-bottom: 1px solid var(--border-color);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .modal-header h3 { margin: 0; font-size: 18px; }
+            .modal-close-btn {
+                background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted);
+                text-decoration: none;
+            }
+            .modal-body { padding: 24px; }
+            .detail-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                margin-bottom: 20px;
+            }
+            .detail-item {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .detail-label {
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                letter-spacing: 0.5px;
+            }
+            .detail-value { font-size: 14px; color: var(--text-main); }
+            .font-bold { font-weight: 700; }
+            .font-mono { font-family: monospace; }
+            .detail-desc-box {
+                background: #f8fafc;
+                padding: 16px;
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border-color);
+            }
+            .desc-content {
+                margin-top: 6px;
+                font-size: 13px;
+                line-height: 1.5;
+                color: var(--text-main);
+                white-space: pre-wrap;
+            }
+            .modal-footer {
+                padding: 14px 24px;
+                background: #f8fafc;
+                border-top: 1px solid var(--border-color);
+                text-align: right;
+            }
+        </style>
+
+    </ui:define>
+</ui:composition>

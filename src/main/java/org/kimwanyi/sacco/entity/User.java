@@ -1,7 +1,11 @@
 package org.kimwanyi.sacco.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.kimwanyi.sacco.enums.UserStatus;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -9,43 +13,103 @@ import java.util.Set;
 
 @Data
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_username", columnNames = "username"),
+        @UniqueConstraint(name = "uk_user_email", columnNames = "email")
+})
+public class User extends BaseEntity{
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = false)
-    private String firstName;
-
-    @Column(nullable = false, unique = false)
-    private String lastName;
-
-    @Column(nullable = false, unique = true)
+    @NotBlank(message = "Username is required")
+    @Size(min = 2, max = 100, message = "Username must be between 2 and 100 characters")
+    @Column(nullable = false, length = 100)
     private String username;
 
-    @Column(nullable = false)
-    private String password;
-
-    @Column(unique = true)
+    @NotBlank(message = "Email is required")
+    @Email
+    @Column(nullable = false, length = 150)
     private String email;
 
-    private boolean accountLocked;
+    @NotBlank
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
 
-    private int failedAttempts;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 25)
+    private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
-    private LocalDateTime createdAt;
+    @Column(name = "account_locked_until")
+    private LocalDateTime accountLockedUntil;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
-    inverseJoinColumns = @JoinColumn(name = "role_id")
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "verification_token", length = 100)
+    private String verificationToken;
+
+    @Column(name = "verification_token_expiry")
+    private LocalDateTime verificationTokenExpiry;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL,
+            orphanRemoval = true, fetch = FetchType.LAZY
     )
-    private Set<Role> roles = new HashSet<>();
+    private Set<UserRole> userRoles = new HashSet<>();
 
     public User(){
 
+    }
+
+    public void incrementFailedLoginAttempts() {
+        failedLoginAttempts++;
+    }
+
+    public void resetFailedLoginAttempts() {
+        failedLoginAttempts = 0;
+    }
+
+    public boolean isLocked() {
+        return accountLockedUntil != null &&
+                accountLockedUntil.isAfter(LocalDateTime.now());
+    }
+
+    public void lockUntil(LocalDateTime time) {
+        this.accountLockedUntil = time;
+    }
+
+    public void updateLastLogin() {
+        this.lastLogin = LocalDateTime.now();
+    }
+
+    public void addRole(Role role){
+
+        UserRole userRole = new UserRole();
+
+        userRole.setUser(this);
+
+        userRole.setRole(role);
+
+        userRoles.add(userRole);
+
+    }
+
+    public void lockAccount(int minutes){
+        this.accountLockedUntil = LocalDateTime.now().plusMinutes(minutes);
+
+    }
+
+    public void increaseFailedAttempts(){
+        failedLoginAttempts++;
+    }
+
+    public boolean hasReachedMaxAttempts(int maxAttempts){
+        return failedLoginAttempts >= maxAttempts;
     }
 }

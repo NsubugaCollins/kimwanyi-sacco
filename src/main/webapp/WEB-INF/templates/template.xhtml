@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, private"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title><ui:insert name="title">Kimwanyi SACCO</ui:insert> - Financial Portal</title>
+    
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="#{request.contextPath}/resources/css/style.css"/>
+</h:head>
+
+<h:body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
+                <img src="#{request.contextPath}/resources/images/kimwanyi.jpeg" alt="Kimwanyi SACCO Logo" class="brand-logo-img"/>
+                <div>
+                    <div class="brand-text">Kimwanyi SACCO</div>
+                    <div class="brand-subtitle">Financial System</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Main Menu</div>
+                
+                <h:outputLink value="#{request.contextPath}/dashboard.xhtml" 
+                              styleClass="nav-link #{view.viewId.endsWith('dashboard.xhtml') ? 'active' : ''}">
+                    <span class="nav-icon">&#x1F4CA;</span>
+                    <span>Dashboard</span>
+                </h:outputLink>
+
+                <h:panelGroup rendered="#{authBean.isStaff()}">
+                    <h:outputLink value="#{request.contextPath}/members.xhtml" 
+                                  styleClass="nav-link #{view.viewId.endsWith('members.xhtml') ? 'active' : ''}">
+                        <span class="nav-icon">&#x1F465;</span>
+                        <span>Member Directory</span>
+                    </h:outputLink>
+                </h:panelGroup>
+
+                <h:outputLink value="#{request.contextPath}/savings.xhtml" 
+                              styleClass="nav-link #{view.viewId.endsWith('savings.xhtml') ? 'active' : ''}">
+                    <span class="nav-icon">&#x1F4B0;</span>
+                    <span>#{authBean.isCashier() ? 'Teller Counter' : 'Savings & Accounts'}</span>
+                </h:outputLink>
+
+                <h:outputLink value="#{request.contextPath}/loans.xhtml" 
+                              styleClass="nav-link #{view.viewId.endsWith('loans.xhtml') ? 'active' : ''}">
+                    <span class="nav-icon">&#x1F4DC;</span>
+                    <span>#{authBean.isMember() ? 'My Loan Requests' : 'Loans & Credit'}</span>
+                </h:outputLink>
+
+                <div class="nav-section-label">Accounting & System</div>
+
+                <h:panelGroup rendered="#{authBean.isManager() or authBean.isAdmin()}">
+                    <h:outputLink value="#{request.contextPath}/ledger.xhtml" 
+                                  styleClass="nav-link #{view.viewId.endsWith('ledger.xhtml') ? 'active' : ''}">
+                        <span class="nav-icon">&#x1F4D8;</span>
+                        <span>General Ledger</span>
+                    </h:outputLink>
+                </h:panelGroup>
+
+                <h:panelGroup rendered="#{authBean.isManager() or authBean.isAdmin()}">
+                    <h:outputLink value="#{request.contextPath}/audit/audit.xhtml" 
+                                  styleClass="nav-link #{view.viewId.endsWith('audit.xhtml') ? 'active' : ''}">
+                        <span class="nav-icon">&#x1F4CB;</span>
+                        <span>Audit Logs</span>
+                        <h:panelGroup rendered="#{auditBean.totalCount > 0}">
+                            <span class="nav-badge" style="background: var(--primary-600);">#{auditBean.totalCount}</span>
+                        </h:panelGroup>
+                    </h:outputLink>
+                </h:panelGroup>
+
+                <h:outputLink value="#{request.contextPath}/notifications.xhtml" 
+                              styleClass="nav-link #{view.viewId.endsWith('notifications.xhtml') ? 'active' : ''}">
+                    <span class="nav-icon">&#x1F514;</span>
+                    <span>Notifications</span>
+                    <h:panelGroup rendered="#{notificationBean.unreadCount > 0}">
+                        <span class="nav-badge">#{notificationBean.unreadCount}</span>
+                    </h:panelGroup>
+                </h:outputLink>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-avatar">
+                    #{empty authBean.currentUser ? 'US' : (empty authBean.currentUser.fullName ? authBean.currentUser.username.substring(0, 2).toUpperCase() : authBean.currentUser.fullName.substring(0, 2).toUpperCase())}
+                </div>
+                <div class="user-info">
+                    <div class="user-name">#{empty authBean.currentUser ? 'Guest' : (empty authBean.currentUser.fullName ? authBean.currentUser.username : authBean.currentUser.fullName)}</div>
+                    <div class="user-role">#{authBean.roleDisplayName}</div>
+                </div>
+                <h:form style="display: inline;">
+                    <h:commandButton value="&#x1F6AA;" action="#{authBean.logout}" style="background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 16px; padding: 4px 8px; border-radius: 6px;" title="Sign Out"/>
+                </h:form>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="app-main">
+            <!-- Header Bar -->
+            <header class="app-header">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button type="button" id="sidebarToggleBtn" class="header-btn" style="display: none;">&#x2630;</button>
+                    <div class="header-search">
+                        <span class="header-search-icon">&#x1F50D;</span>
+                        <input type="text" placeholder="Search accounts, members, receipt #..."/>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <h:outputLink value="#{request.contextPath}/notifications.xhtml" styleClass="header-btn">
+                        <span>&#x1F514;</span>
+                        <h:panelGroup rendered="#{notificationBean.unreadCount > 0}">
+                            <span class="btn-indicator"></span>
+                        </h:panelGroup>
+                    </h:outputLink>
+                    <h:panelGroup rendered="#{not authBean.isLoggedIn()}">
+                        <h:outputLink value="#{request.contextPath}/register.xhtml" styleClass="btn btn-outline btn-sm">
+                            + Register As
+                        </h:outputLink>
+                    </h:panelGroup>
+                    <h:panelGroup rendered="#{authBean.isLoggedIn()}">
+                        <h:form style="display: inline;">
+                            <h:commandButton value="Sign Out" action="#{authBean.logout}" styleClass="btn btn-outline btn-sm"/>
+                        </h:form>
+                    </h:panelGroup>
+                </div>
+            </header>
+
+            <!-- Page Body -->
+            <div class="app-content">
+                <ui:insert name="content"/>
+            </div>
+        </main>
+    </div>
+
+    <!-- JS Helper Script -->
+    <script src="#{request.contextPath}/resources/js/app.js"></script>
+</h:body>
+</html>

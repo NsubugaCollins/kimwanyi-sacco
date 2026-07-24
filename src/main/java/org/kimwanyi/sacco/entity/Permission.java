@@ -1,44 +1,38 @@
 package org.kimwanyi.sacco.entity;
 
-
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+import org.kimwanyi.sacco.enums.PermissionName;
 
 import java.util.HashSet;
 import java.util.Set;
 
-
-@Getter
-@Setter
+@Data
 @Entity
-@Table(name = "permissions")
+@Table(name = "permissions", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_permission_name", columnNames = "name")
+        })
 public class Permission extends BaseEntity {
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, unique = true)
+    private PermissionName name;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String name;
-
-
-    @Column(length = 1000)
+    @Size(max = 255)
+    @Column(length = 255)
     private String description;
 
+    @Column(nullable = false)
+    private boolean active = true;
 
-    @ManyToMany(mappedBy = "permissions")
-    private Set<Role> roles = new HashSet<>();
+    @OneToMany(mappedBy = "permission", cascade = CascadeType.ALL,
+            orphanRemoval = true, fetch = FetchType.LAZY
+    )
+    private Set<RolePermission> rolePermissions = new HashSet<>();
 
-
-    public Permission(){
-
+    public Permission() {
     }
-
-
-    public Permission(String name, String description){
-
-        this.name = name;
-        this.description = description;
-
-    }
-
 
 }
